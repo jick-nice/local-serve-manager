@@ -42,6 +42,10 @@ const COMMAND_STATUS_LABELS: Record<CommandStatus, string> = {
 const folderName = (path: string): string => path.split(/[\\/]/).filter(Boolean).at(-1) ?? "新项目";
 
 export default function App(): JSX.Element {
+  if (!window.serveManager) {
+    return <DesktopOnly />;
+  }
+
   const [projects, setProjects] = useState<ProjectWithServices[]>([]);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -238,6 +242,15 @@ export default function App(): JSX.Element {
       )}
 
       {activeCommandService && <CommandDrawer service={activeCommandService} onClose={() => setActiveCommandService(null)} />}
+    </main>
+  );
+}
+
+function DesktopOnly(): JSX.Element {
+  return (
+    <main className="desktop-only">
+      <h1>Serve Manager</h1>
+      <p>请在桌面应用窗口中使用，浏览器页面没有本地服务管理权限。</p>
     </main>
   );
 }

@@ -31,6 +31,24 @@ button:disabled {
   min-height: 100vh;
 }
 
+.desktop-only {
+  min-height: 100vh;
+  display: grid;
+  place-content: center;
+  gap: 8px;
+  padding: 24px;
+  text-align: center;
+}
+
+.desktop-only h1,
+.desktop-only p {
+  margin: 0;
+}
+
+.desktop-only p {
+  color: #596575;
+}
+
 .toolbar {
   height: 58px;
   display: grid;

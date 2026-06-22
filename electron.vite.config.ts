@@ -13,6 +13,7 @@ export default defineConfig({
   },
   renderer: {
     root: ".",
+    server: { port: 48573, strictPort: true },
     build: { rollupOptions: { input: resolve("index.html") } },
     resolve: { alias: { "@shared": resolve("src/shared") } },
     plugins: [react()]
