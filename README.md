@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <img alt="Version" src="https://img.shields.io/badge/version-1.0.0-2563eb" />
+  <img alt="Version" src="https://img.shields.io/badge/version-1.0.1-2563eb" />
   <img alt="Platform" src="https://img.shields.io/badge/platform-Windows-0078d4" />
   <img alt="Electron" src="https://img.shields.io/badge/Electron-33-47848f" />
   <img alt="License" src="https://img.shields.io/badge/license-MIT-16a34a" />
@@ -55,7 +55,7 @@ Serve Manager is a desktop tool for developers who run many local projects at th
 Download the Windows installer from the release artifacts:
 
 ```text
-Serve Manager Setup 1.0.0.exe
+Serve Manager Setup 1.0.1.exe
 ```
 
 Run the installer and launch **Serve Manager** from the desktop shortcut or the Start Menu.
@@ -161,7 +161,7 @@ Serve Manager 是一个面向本地开发的 Windows 桌面工具，用来统一
 从 release 产物中下载安装包：
 
 ```text
-Serve Manager Setup 1.0.0.exe
+Serve Manager Setup 1.0.1.exe
 ```
 
 安装完成后，可以从桌面快捷方式或开始菜单启动 **Serve Manager**。

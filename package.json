@@ -1,6 +1,6 @@
 {
   "name": "serve-manager",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A lightweight Windows desktop app for managing local development services.",
   "author": "Serve Manager contributors",
   "private": true,
@@ -43,7 +43,10 @@
     "appId": "dev.serve-manager.desktop",
     "productName": "Serve Manager",
     "copyright": "Copyright © 2026 Serve Manager contributors",
-    "directories": { "output": "dist" },
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
     "files": ["out/**/*", "package.json"],
     "win": {
       "target": "nsis",
@@ -52,6 +55,7 @@
     "nsis": {
       "oneClick": false,
       "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
       "installerIcon": "build/icon.ico",
       "uninstallerIcon": "build/icon.ico",
       "installerHeaderIcon": "build/icon.ico",
