@@ -1,8 +1,10 @@
 {
   "name": "serve-manager",
-  "version": "0.1.0",
-  "description": "Windows desktop manager for local development services.",
+  "version": "1.0.0",
+  "description": "A lightweight Windows desktop app for managing local development services.",
+  "author": "Serve Manager contributors",
   "private": true,
+  "license": "MIT",
   "main": "out/main/main.js",
   "scripts": {
     "dev": "electron-vite dev",
@@ -38,14 +40,21 @@
     "vitest": "^2.1.8"
   },
   "build": {
-    "appId": "local.serve.manager",
+    "appId": "dev.serve-manager.desktop",
     "productName": "Serve Manager",
+    "copyright": "Copyright © 2026 Serve Manager contributors",
     "directories": { "output": "dist" },
     "files": ["out/**/*", "package.json"],
-    "win": { "target": "nsis" },
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.ico"
+    },
     "nsis": {
       "oneClick": false,
       "perMachine": false,
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico",
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Serve Manager"
