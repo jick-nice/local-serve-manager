@@ -1,7 +1,7 @@
-# Serve Manager
+# 本地服务管理器 / Local Server Manager
 
 <p align="center">
-  <img src="./build/icon.png" width="96" alt="Serve Manager icon" />
+  <img src="./build/icon.png" width="96" alt="本地服务管理器 icon" />
 </p>
 
 <p align="center">
@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <img alt="Version" src="https://img.shields.io/badge/version-1.0.1-2563eb" />
+  <img alt="Version" src="https://img.shields.io/badge/version-1.0.2-2563eb" />
   <img alt="Platform" src="https://img.shields.io/badge/platform-Windows-0078d4" />
   <img alt="Electron" src="https://img.shields.io/badge/Electron-33-47848f" />
   <img alt="License" src="https://img.shields.io/badge/license-MIT-16a34a" />
@@ -24,7 +24,7 @@
 
 ## English
 
-Serve Manager is a desktop tool for developers who run many local projects at the same time. It helps you keep frontend, backend, and custom services in one place, start or stop them with one click, inspect logs, and run project-specific commands without switching between terminal windows.
+Local Server Manager is a desktop tool for developers who run many local projects at the same time. It helps you keep frontend, backend, and custom services in one place, start or stop them with one click, inspect logs, and run project-specific commands without switching between terminal windows.
 
 ### Highlights
 
@@ -55,10 +55,10 @@ Serve Manager is a desktop tool for developers who run many local projects at th
 Download the Windows installer from the release artifacts:
 
 ```text
-Serve Manager Setup 1.0.1.exe
+本地服务管理器 Setup 1.0.2.exe
 ```
 
-Run the installer and launch **Serve Manager** from the desktop shortcut or the Start Menu.
+Run the installer and launch **本地服务管理器** from the desktop shortcut or the Start Menu.
 
 ### Usage
 
@@ -116,7 +116,7 @@ dist/         Packaged artifacts
 
 ### Privacy
 
-Serve Manager is local-first. It does not require a cloud account and does not send project paths, logs, or commands to any remote service. SQLite data and runtime logs stay on your machine.
+Local Server Manager is local-first. It does not require a cloud account and does not send project paths, logs, or commands to any remote service. SQLite data and runtime logs stay on your machine.
 
 ### Contributing
 
@@ -130,7 +130,7 @@ MIT
 
 ## 简体中文
 
-Serve Manager 是一个面向本地开发的 Windows 桌面工具，用来统一管理多个本地项目的前端、后端和自定义服务。你可以一键启动/停止服务、查看日志、管理项目自带命令，减少在多个终端窗口之间来回切换。
+本地服务管理器是一个面向本地开发的 Windows 桌面工具，用来统一管理多个本地项目的前端、后端和自定义服务。你可以一键启动/停止服务、查看日志、管理项目自带命令，减少在多个终端窗口之间来回切换。
 
 ### 核心功能
 
@@ -161,10 +161,10 @@ Serve Manager 是一个面向本地开发的 Windows 桌面工具，用来统一
 从 release 产物中下载安装包：
 
 ```text
-Serve Manager Setup 1.0.1.exe
+本地服务管理器 Setup 1.0.2.exe
 ```
 
-安装完成后，可以从桌面快捷方式或开始菜单启动 **Serve Manager**。
+安装完成后，可以从桌面快捷方式或开始菜单启动 **本地服务管理器**。
 
 ### 使用方式
 
@@ -222,7 +222,7 @@ dist/         打包产物
 
 ### 隐私说明
 
-Serve Manager 是本地优先应用，不需要云账号，也不会上传项目路径、日志或命令。SQLite 数据和运行日志都保存在你的本机。
+本地服务管理器是本地优先应用，不需要云账号，也不会上传项目路径、日志或命令。SQLite 数据和运行日志都保存在你的本机。
 
 ### 参与贡献
 

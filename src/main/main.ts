@@ -125,7 +125,7 @@ const createWindow = (trustedDevUrl?: string): BrowserWindow => {
       defaultId: 0,
       cancelId: 1,
       title: "还有服务在运行",
-      message: "还有由 Serve Manager 启动的服务在运行，要停止后退出吗？"
+      message: "还有由本地服务管理器启动的服务在运行，要停止后退出吗？"
     });
     if (result.response === 0) {
       await processManager.stopAll();

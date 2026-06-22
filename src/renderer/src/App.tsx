@@ -249,7 +249,7 @@ export default function App(): JSX.Element {
 function DesktopOnly(): JSX.Element {
   return (
     <main className="desktop-only">
-      <h1>Serve Manager</h1>
+      <h1>本地服务管理器</h1>
       <p>请在桌面应用窗口中使用，浏览器页面没有本地服务管理权限。</p>
     </main>
   );
@@ -266,7 +266,7 @@ function Toolbar(props: {
 }): JSX.Element {
   return (
     <header className="toolbar">
-      <div className="brand">Serve Manager</div>
+      <div className="brand">本地服务管理器</div>
       <button className="primary-button" onClick={props.onAddProject}>
         <FolderPlus size={16} /> 添加项目
       </button>
