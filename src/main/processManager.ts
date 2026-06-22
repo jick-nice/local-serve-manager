@@ -4,6 +4,7 @@ import type { ChildProcess } from "node:child_process";
 import { createServer } from "node:net";
 import kill from "tree-kill";
 import type { LogEntry, PortCheck, Service } from "@shared/types";
+import { resolveLaunchCommand } from "./commandResolver";
 import type { AppDatabase } from "./database";
 
 interface RunningService {
@@ -45,10 +46,12 @@ export class ProcessManager {
       if (!port.available) return port;
     }
 
+    const launch = resolveLaunchCommand(service);
     this.emitService(this.database.setStatus(service.id, "starting"));
-    const child = crossSpawn(service.command, {
+    this.log(service.id, "system", `工作目录：${service.servicePath}\n启动命令：${launch.command}\n`);
+    const child = crossSpawn(launch.command, {
       cwd: service.servicePath,
-      env: { ...process.env, PORT: service.port ? String(service.port) : process.env.PORT },
+      env: launch.env,
       shell: true,
       windowsHide: true
     });
