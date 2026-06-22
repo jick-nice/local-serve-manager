@@ -1,6 +1,19 @@
 import { app, BrowserWindow } from "electron";
 import { join } from "node:path";
 
+const isTrustedDevUrl = (rawUrl: string | undefined): rawUrl is string => {
+  if (app.isPackaged || !rawUrl) {
+    return false;
+  }
+
+  try {
+    const url = new URL(rawUrl);
+    return url.protocol === "http:" && (url.hostname === "localhost" || url.hostname === "127.0.0.1");
+  } catch {
+    return false;
+  }
+};
+
 const createWindow = (): void => {
   const window = new BrowserWindow({
     width: 1220,
@@ -10,7 +23,7 @@ const createWindow = (): void => {
     show: false,
     webPreferences: {
       preload: join(__dirname, "../preload/index.js"),
-      sandbox: false,
+      sandbox: true,
       contextIsolation: true,
       nodeIntegration: false
     }
@@ -18,7 +31,7 @@ const createWindow = (): void => {
 
   window.once("ready-to-show", () => window.show());
 
-  if (process.env.ELECTRON_RENDERER_URL) {
+  if (isTrustedDevUrl(process.env.ELECTRON_RENDERER_URL)) {
     void window.loadURL(process.env.ELECTRON_RENDERER_URL);
   } else {
     void window.loadFile(join(__dirname, "../renderer/index.html"));
