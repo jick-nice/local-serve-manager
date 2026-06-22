@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, join } from "node:path";
-import type { DependencyCheck, ServiceDraft, StackDetectionResult } from "@shared/types";
+import type { DependencyCheck, ServiceCommandDraft, ServiceDraft, ServiceStack, StackDetectionResult } from "@shared/types";
 
 const candidateDirs = ["", "frontend", "web", "client", "admin", "backend", "server", "api"];
 
@@ -16,6 +16,14 @@ const packageManager = (dir: string): "pnpm" | "yarn" | "bun" | "npm" => {
   return "npm";
 };
 
+const readPackageJson = (dir: string): any | null => {
+  try {
+    return JSON.parse(read(join(dir, "package.json")));
+  } catch {
+    return null;
+  }
+};
+
 const runScript = (dir: string, scripts: Record<string, string> = {}): string => {
   const script = ["dev", "start", "serve"].find((name) => scripts[name]);
   if (!script) return "";
@@ -28,11 +36,13 @@ const runScript = (dir: string, scripts: Record<string, string> = {}): string =>
 
 export const detectStack = (dir: string): StackDetectionResult => {
   if (exists(dir, "package.json")) {
-    const pkg = JSON.parse(read(join(dir, "package.json")));
-    const deps = { ...(pkg.dependencies ?? {}), ...(pkg.devDependencies ?? {}) };
-    const command = runScript(dir, pkg.scripts ?? {});
-    if (deps.react || deps.next) return { stack: "react", command, port: 5173, confidence: "high", evidence: ["package.json", "react"] };
-    if (deps.vue) return { stack: "vue", command, port: 5173, confidence: "high", evidence: ["package.json", "vue"] };
+    const pkg = readPackageJson(dir);
+    if (pkg) {
+      const deps = { ...(pkg.dependencies ?? {}), ...(pkg.devDependencies ?? {}) };
+      const command = runScript(dir, pkg.scripts ?? {});
+      if (deps.react || deps.next) return { stack: "react", command, port: 5173, confidence: "high", evidence: ["package.json", "react"] };
+      if (deps.vue) return { stack: "vue", command, port: 5173, confidence: "high", evidence: ["package.json", "vue"] };
+    }
   }
 
   if (exists(dir, "pubspec.yaml")) {
@@ -116,4 +126,86 @@ export const checkDependencies = (service: ServiceDraft): DependencyCheck => {
   }
 
   return { missing: false, message: "依赖检查通过。", installCommand: null };
+};
+
+const nodeCommand = (manager: string, script: string): string => {
+  if (manager === "npm") return `npm run ${script}`;
+  if (manager === "bun") return `bun run ${script}`;
+  return `${manager} ${script}`;
+};
+
+const kindForCommand = (name: string, command: string): ServiceCommandDraft["kind"] => {
+  const text = `${name} ${command}`.toLowerCase();
+  return /\b(dev|serve|preview|watch|start|bootrun|run)\b/.test(text) ? "long-running" : "task";
+};
+
+const uniqueCommands = (commands: ServiceCommandDraft[]): ServiceCommandDraft[] => {
+  const seen = new Set<string>();
+  return commands.filter((item) => {
+    const key = `${item.name}\n${item.command}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+
+export const discoverCommands = (servicePath: string, stack: ServiceStack): ServiceCommandDraft[] => {
+  if (exists(servicePath, "package.json")) {
+    const pkg = readPackageJson(servicePath);
+    if (!pkg) return [];
+    const scripts = pkg.scripts ?? {};
+    const manager = packageManager(servicePath);
+    const scriptCommands = Object.keys(scripts).map((script) => {
+      const command = nodeCommand(manager, script);
+      return { name: script, command, kind: kindForCommand(script, command) };
+    });
+    const installCommand = manager === "npm" ? "npm install" : `${manager} install`;
+    return uniqueCommands([{ name: "install", command: installCommand, kind: "task" }, ...scriptCommands]);
+  }
+
+  if (stack === "spring-maven") {
+    return [
+      { name: "clean", command: "mvn clean", kind: "task" },
+      { name: "test", command: "mvn test", kind: "task" },
+      { name: "package", command: "mvn package", kind: "task" },
+      { name: "install", command: "mvn install", kind: "task" },
+      { name: "spring-boot:run", command: "mvn spring-boot:run", kind: "long-running" }
+    ];
+  }
+
+  if (stack === "spring-gradle") {
+    const gradle = exists(servicePath, "gradlew.bat") || exists(servicePath, "gradlew") ? "gradlew" : "gradle";
+    return [
+      { name: "clean", command: `${gradle} clean`, kind: "task" },
+      { name: "test", command: `${gradle} test`, kind: "task" },
+      { name: "build", command: `${gradle} build`, kind: "task" },
+      { name: "bootRun", command: `${gradle} bootRun`, kind: "long-running" }
+    ];
+  }
+
+  if (stack === "flutter") {
+    return [
+      { name: "pub get", command: "flutter pub get", kind: "task" },
+      { name: "analyze", command: "flutter analyze", kind: "task" },
+      { name: "test", command: "flutter test", kind: "task" },
+      { name: "build windows", command: "flutter build windows", kind: "task" },
+      { name: "run windows", command: "flutter run -d windows", kind: "long-running" }
+    ];
+  }
+
+  if (stack === "fastapi") {
+    return [
+      { name: "install requirements", command: "python -m pip install -r requirements.txt", kind: "task" },
+      { name: "uvicorn", command: "uvicorn main:app --reload --port 8000", kind: "long-running" }
+    ];
+  }
+
+  if (stack === "flask") {
+    return [
+      { name: "install requirements", command: "python -m pip install -r requirements.txt", kind: "task" },
+      { name: "flask run", command: "flask --app app run --port 5000", kind: "long-running" }
+    ];
+  }
+
+  return [];
 };

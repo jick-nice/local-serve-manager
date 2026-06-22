@@ -1,7 +1,20 @@
 import Database from "better-sqlite3";
 import { app } from "electron";
 import { join } from "node:path";
-import type { LogEntry, LogStream, Project, ProjectWithServices, Service, ServiceDraft, ServiceStatus } from "@shared/types";
+import type {
+  CommandLogEntry,
+  CommandStatus,
+  LogEntry,
+  LogStream,
+  Project,
+  ProjectWithServices,
+  Service,
+  ServiceCommand,
+  ServiceCommandDraft,
+  ServiceDraft,
+  ServiceStatus
+} from "@shared/types";
+import { discoverCommands } from "./detector";
 
 const now = (): string => new Date().toISOString();
 
@@ -31,6 +44,26 @@ const mapService = (row: any): Service => ({
 const mapLog = (row: any): LogEntry => ({
   id: row.id,
   serviceId: row.service_id,
+  timestamp: row.timestamp,
+  stream: row.stream,
+  content: row.content
+});
+
+const mapCommand = (row: any): ServiceCommand => ({
+  id: row.id,
+  serviceId: row.service_id,
+  name: row.name,
+  command: row.command,
+  kind: row.kind,
+  sortOrder: row.sort_order,
+  lastStatus: row.last_status,
+  createdAt: row.created_at,
+  updatedAt: row.updated_at
+});
+
+const mapCommandLog = (row: any): CommandLogEntry => ({
+  id: row.id,
+  commandId: row.command_id,
   timestamp: row.timestamp,
   stream: row.stream,
   content: row.content
@@ -74,6 +107,34 @@ export class AppDatabase {
         timestamp TEXT NOT NULL,
         stream TEXT NOT NULL,
         content TEXT NOT NULL,
+        FOREIGN KEY(service_id) REFERENCES services(id) ON DELETE CASCADE
+      );
+
+      CREATE TABLE IF NOT EXISTS service_commands (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        service_id INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        command TEXT NOT NULL,
+        kind TEXT NOT NULL DEFAULT 'task',
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        last_status TEXT NOT NULL DEFAULT 'idle',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY(service_id) REFERENCES services(id) ON DELETE CASCADE
+      );
+
+      CREATE TABLE IF NOT EXISTS command_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        command_id INTEGER NOT NULL,
+        timestamp TEXT NOT NULL,
+        stream TEXT NOT NULL,
+        content TEXT NOT NULL,
+        FOREIGN KEY(command_id) REFERENCES service_commands(id) ON DELETE CASCADE
+      );
+
+      CREATE TABLE IF NOT EXISTS command_discovery (
+        service_id INTEGER PRIMARY KEY,
+        created_at TEXT NOT NULL,
         FOREIGN KEY(service_id) REFERENCES services(id) ON DELETE CASCADE
       );
     `);
@@ -142,6 +203,50 @@ export class AppDatabase {
     this.db.prepare("DELETE FROM services WHERE id = ?").run(id);
   }
 
+  listCommands(serviceId: number): ServiceCommand[] {
+    const commands = this.db.prepare("SELECT * FROM service_commands WHERE service_id = ? ORDER BY sort_order ASC, id ASC").all(serviceId).map(mapCommand);
+    if (commands.length > 0) {
+      this.markCommandDiscovery(serviceId);
+      return commands;
+    }
+    if (this.hasCommandDiscovery(serviceId)) return commands;
+    const service = this.getService(serviceId);
+    this.addDiscoveredCommands(service);
+    return this.db.prepare("SELECT * FROM service_commands WHERE service_id = ? ORDER BY sort_order ASC, id ASC").all(serviceId).map(mapCommand);
+  }
+
+  createCommand(serviceId: number, draft: ServiceCommandDraft): ServiceCommand {
+    const command = this.insertCommand(serviceId, draft, this.nextCommandSortOrder(serviceId));
+    this.markCommandDiscovery(serviceId);
+    return command;
+  }
+
+  updateCommand(command: ServiceCommand): ServiceCommand {
+    this.db
+      .prepare(
+        `UPDATE service_commands
+         SET name = ?, command = ?, kind = ?, sort_order = ?, last_status = ?, updated_at = ?
+         WHERE id = ?`
+      )
+      .run(command.name, command.command, command.kind, command.sortOrder, command.lastStatus, now(), command.id);
+    return this.getCommand(command.id);
+  }
+
+  getCommand(id: number): ServiceCommand {
+    const row = this.db.prepare("SELECT * FROM service_commands WHERE id = ?").get(id);
+    if (!row) throw new Error(`Command not found: ${id}`);
+    return mapCommand(row);
+  }
+
+  deleteCommand(id: number): void {
+    this.db.prepare("DELETE FROM service_commands WHERE id = ?").run(id);
+  }
+
+  setCommandStatus(id: number, status: CommandStatus): ServiceCommand {
+    this.db.prepare("UPDATE service_commands SET last_status = ?, updated_at = ? WHERE id = ?").run(status, now(), id);
+    return this.getCommand(id);
+  }
+
   setStatus(id: number, status: ServiceStatus): Service {
     this.db.prepare("UPDATE services SET last_status = ?, updated_at = ? WHERE id = ?").run(status, now(), id);
     return this.getService(id);
@@ -164,6 +269,22 @@ export class AppDatabase {
 
   clearAllLogs(): void {
     this.db.prepare("DELETE FROM service_logs").run();
+    this.db.prepare("DELETE FROM command_logs").run();
+  }
+
+  appendCommandLog(commandId: number, stream: LogStream, content: string): CommandLogEntry {
+    const result = this.db
+      .prepare("INSERT INTO command_logs (command_id, timestamp, stream, content) VALUES (?, ?, ?, ?)")
+      .run(commandId, now(), stream, content);
+    return mapCommandLog(this.db.prepare("SELECT * FROM command_logs WHERE id = ?").get(result.lastInsertRowid));
+  }
+
+  listCommandLogs(commandId: number): CommandLogEntry[] {
+    return this.db.prepare("SELECT * FROM command_logs WHERE command_id = ? ORDER BY id ASC").all(commandId).map(mapCommandLog);
+  }
+
+  clearCommandLogs(commandId: number): void {
+    this.db.prepare("DELETE FROM command_logs WHERE command_id = ?").run(commandId);
   }
 
   private insertService(projectId: number, draft: ServiceDraft, sortOrder: number): Service {
@@ -175,7 +296,9 @@ export class AppDatabase {
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'stopped', ?, ?)`
       )
       .run(projectId, draft.name, draft.servicePath, draft.stack, draft.command, draft.port, draft.note, sortOrder, timestamp, timestamp);
-    return this.getService(Number(result.lastInsertRowid));
+    const service = this.getService(Number(result.lastInsertRowid));
+    this.addDiscoveredCommands(service);
+    return service;
   }
 
   private nextSortOrder(projectId: number): number {
@@ -183,5 +306,39 @@ export class AppDatabase {
       next_order: number;
     };
     return row.next_order;
+  }
+
+  private addDiscoveredCommands(service: Service): void {
+    if (this.hasCommandDiscovery(service.id)) return;
+    const commands = discoverCommands(service.servicePath, service.stack);
+    commands.forEach((command, index) => this.insertCommand(service.id, command, index));
+    this.markCommandDiscovery(service.id);
+  }
+
+  private insertCommand(serviceId: number, draft: ServiceCommandDraft, sortOrder: number): ServiceCommand {
+    const timestamp = now();
+    const result = this.db
+      .prepare(
+        `INSERT INTO service_commands
+         (service_id, name, command, kind, sort_order, last_status, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, 'idle', ?, ?)`
+      )
+      .run(serviceId, draft.name, draft.command, draft.kind, sortOrder, timestamp, timestamp);
+    return this.getCommand(Number(result.lastInsertRowid));
+  }
+
+  private nextCommandSortOrder(serviceId: number): number {
+    const row = this.db.prepare("SELECT COALESCE(MAX(sort_order), -1) + 1 AS next_order FROM service_commands WHERE service_id = ?").get(serviceId) as {
+      next_order: number;
+    };
+    return row.next_order;
+  }
+
+  private hasCommandDiscovery(serviceId: number): boolean {
+    return Boolean(this.db.prepare("SELECT 1 FROM command_discovery WHERE service_id = ?").get(serviceId));
+  }
+
+  private markCommandDiscovery(serviceId: number): void {
+    this.db.prepare("INSERT OR IGNORE INTO command_discovery (service_id, created_at) VALUES (?, ?)").run(serviceId, now());
   }
 }

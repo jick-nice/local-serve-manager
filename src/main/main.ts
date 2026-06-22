@@ -1,6 +1,6 @@
 import { app, BrowserWindow, dialog, ipcMain, session } from "electron";
 import { basename, join } from "node:path";
-import type { Service, ServiceDraft } from "@shared/types";
+import type { Service, ServiceCommand, ServiceCommandDraft, ServiceDraft } from "@shared/types";
 import { AppDatabase } from "./database";
 import { checkDependencies, detectService, scanProject } from "./detector";
 import { ProcessManager } from "./processManager";
@@ -70,6 +70,17 @@ const registerIpc = (): void => {
   ipcMain.handle("service:save", (_event, input: ServiceDraft & { projectId: number }) => database.createService(input.projectId, input));
   ipcMain.handle("service:update", (_event, input: Service) => database.updateService(input));
   ipcMain.handle("service:delete", (_event, serviceId: number) => database.deleteService(serviceId));
+  ipcMain.handle("command:list", (_event, serviceId: number) => database.listCommands(serviceId));
+  ipcMain.handle("command:save", (_event, input: ServiceCommandDraft & { serviceId: number }) => database.createCommand(input.serviceId, input));
+  ipcMain.handle("command:update", (_event, input: ServiceCommand) => database.updateCommand(input));
+  ipcMain.handle("command:delete", (_event, commandId: number) => database.deleteCommand(commandId));
+  ipcMain.handle("command:run", (_event, commandId: number) => {
+    const command = database.getCommand(commandId);
+    processManager.runCommand(command, database.getService(command.serviceId));
+  });
+  ipcMain.handle("command:stop", (_event, commandId: number) => processManager.stopCommand(commandId));
+  ipcMain.handle("command-logs:get", (_event, commandId: number) => database.listCommandLogs(commandId));
+  ipcMain.handle("command-logs:clear", (_event, commandId: number) => database.clearCommandLogs(commandId));
   ipcMain.handle("dependency:check", (_event, serviceId: number) => checkDependencies(serviceToDraft(database.getService(serviceId))));
   ipcMain.handle("dependency:install", (_event, serviceId: number) => {
     const service = database.getService(serviceId);

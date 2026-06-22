@@ -1,7 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
-import { Copy, FileText, FolderPlus, Pencil, Play, Plus, Square, Trash2, X } from "lucide-react";
+import { Copy, FileText, FolderPlus, Pencil, Play, Plus, Save, Square, Terminal, Trash2, X } from "lucide-react";
 import { STACK_LABELS } from "@shared/serviceDefaults";
-import type { LogEntry, ProjectWithServices, Service, ServiceDraft, ServiceStack, ServiceStatus } from "@shared/types";
+import type {
+  CommandKind,
+  CommandLogEntry,
+  CommandStatus,
+  LogEntry,
+  ProjectWithServices,
+  Service,
+  ServiceCommand,
+  ServiceCommandDraft,
+  ServiceDraft,
+  ServiceStack,
+  ServiceStatus
+} from "@shared/types";
 
 type StatusFilter = ServiceStatus | "all";
 
@@ -19,6 +31,13 @@ interface ImportState {
 }
 
 const stackOptions = Object.keys(STACK_LABELS) as ServiceStack[];
+const COMMAND_STATUS_LABELS: Record<CommandStatus, string> = {
+  idle: "空闲",
+  running: "运行中",
+  finished: "已完成",
+  failed: "失败",
+  stopping: "停止中"
+};
 
 const folderName = (path: string): string => path.split(/[\\/]/).filter(Boolean).at(-1) ?? "新项目";
 
@@ -29,6 +48,7 @@ export default function App(): JSX.Element {
   const [importState, setImportState] = useState<ImportState | null>(null);
   const [editor, setEditor] = useState<EditorState | null>(null);
   const [activeLogService, setActiveLogService] = useState<Service | null>(null);
+  const [activeCommandService, setActiveCommandService] = useState<Service | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
 
   const reload = async (): Promise<void> => {
@@ -155,6 +175,7 @@ export default function App(): JSX.Element {
               onStart={(service) => void startService(service)}
               onStop={(service) => void window.serveManager.stopService(service.id).then(reload)}
               onLogs={setActiveLogService}
+              onCommands={setActiveCommandService}
               onEdit={(service) =>
                 setEditor({
                   title: "编辑服务",
@@ -215,6 +236,8 @@ export default function App(): JSX.Element {
           onClear={() => void window.serveManager.clearLogs(activeLogService.id).then(() => setLogs([]))}
         />
       )}
+
+      {activeCommandService && <CommandDrawer service={activeCommandService} onClose={() => setActiveCommandService(null)} />}
     </main>
   );
 }
@@ -256,6 +279,7 @@ function ProjectGroup(props: {
   onStart(service: Service): void;
   onStop(service: Service): void;
   onLogs(service: Service): void;
+  onCommands(service: Service): void;
   onEdit(service: Service): void;
   onDelete(service: Service): void;
 }): JSX.Element {
@@ -283,6 +307,7 @@ function ServiceRow(props: {
   onStart(service: Service): void;
   onStop(service: Service): void;
   onLogs(service: Service): void;
+  onCommands(service: Service): void;
   onEdit(service: Service): void;
   onDelete(service: Service): void;
 }): JSX.Element {
@@ -308,6 +333,9 @@ function ServiceRow(props: {
         <button title="日志" onClick={() => props.onLogs(props.service)}>
           <FileText size={15} />
         </button>
+        <button title="命令" onClick={() => props.onCommands(props.service)}>
+          <Terminal size={15} />
+        </button>
         <button title="编辑" disabled={isRunning} onClick={() => props.onEdit(props.service)}>
           <Pencil size={15} />
         </button>
@@ -316,6 +344,173 @@ function ServiceRow(props: {
         </button>
       </div>
     </div>
+  );
+}
+
+function CommandDrawer(props: { service: Service; onClose(): void }): JSX.Element {
+  const [commands, setCommands] = useState<ServiceCommand[]>([]);
+  const [selected, setSelected] = useState<ServiceCommand | null>(null);
+  const [logs, setLogs] = useState<CommandLogEntry[]>([]);
+  const [draft, setDraft] = useState<ServiceCommandDraft>({ name: "", command: "", kind: "task" });
+  const [editDraft, setEditDraft] = useState<ServiceCommandDraft>({ name: "", command: "", kind: "task" });
+
+  const loadCommands = async (): Promise<void> => {
+    const items = await window.serveManager.listCommands(props.service.id);
+    setCommands(items);
+    setSelected((current) => {
+      if (current) return items.find((item) => item.id === current.id) ?? items[0] ?? null;
+      return items[0] ?? null;
+    });
+  };
+
+  useEffect(() => {
+    void loadCommands();
+    const offCommand = window.serveManager.onCommandChanged((changed) => {
+      setCommands((current) => current.map((item) => (item.id === changed.id ? changed : item)));
+      setSelected((current) => (current?.id === changed.id ? changed : current));
+    });
+    const offLog = window.serveManager.onCommandLog((entry) => {
+      setLogs((current) => (selected?.id === entry.commandId ? [...current, entry] : current));
+    });
+    return () => {
+      offCommand();
+      offLog();
+    };
+  }, [props.service.id, selected?.id]);
+
+  useEffect(() => {
+    if (!selected) {
+      setLogs([]);
+      return;
+    }
+    void window.serveManager.getCommandLogs(selected.id).then(setLogs);
+  }, [selected?.id]);
+
+  useEffect(() => {
+    if (!selected) {
+      setEditDraft({ name: "", command: "", kind: "task" });
+      return;
+    }
+    setEditDraft({ name: selected.name, command: selected.command, kind: selected.kind });
+  }, [selected?.id]);
+
+  const saveDraft = async (): Promise<void> => {
+    if (!draft.name.trim() || !draft.command.trim()) return;
+    await window.serveManager.saveCommand({ ...draft, serviceId: props.service.id });
+    setDraft({ name: "", command: "", kind: "task" });
+    await loadCommands();
+  };
+
+  const saveSelected = async (): Promise<void> => {
+    if (!selected) return;
+    if (!editDraft.name.trim() || !editDraft.command.trim()) return;
+    const updated = await window.serveManager.updateCommand({
+      ...selected,
+      name: editDraft.name.trim(),
+      command: editDraft.command.trim(),
+      kind: editDraft.kind
+    });
+    setSelected(updated);
+    await loadCommands();
+  };
+
+  const selectedRunning = selected?.lastStatus === "running";
+  const selectedBusy = selectedRunning || selected?.lastStatus === "stopping";
+  const selectedDirty = selected
+    ? editDraft.name !== selected.name || editDraft.command !== selected.command || editDraft.kind !== selected.kind
+    : false;
+  const logText = logs.map((entry) => `[${entry.stream}] ${entry.content}`).join("");
+
+  return (
+    <aside className="commands-drawer">
+      <header>
+        <div>
+          <h2>{props.service.name} 的命令</h2>
+          <p>{props.service.servicePath}</p>
+        </div>
+        <button onClick={props.onClose} title="关闭">
+          <X size={16} />
+        </button>
+      </header>
+
+      <section className="command-manager">
+        <div className="command-list">
+          {commands.map((command) => (
+            <button className={selected?.id === command.id ? "selected" : ""} key={command.id} onClick={() => setSelected(command)}>
+              <span>{command.name}</span>
+              <small>{command.kind === "long-running" ? "长期" : "一次性"} · {COMMAND_STATUS_LABELS[command.lastStatus]}</small>
+            </button>
+          ))}
+        </div>
+
+        <div className="command-detail">
+          {selected ? (
+            <>
+              <input disabled={selectedBusy} value={editDraft.name} onChange={(event) => setEditDraft({ ...editDraft, name: event.target.value })} />
+              <input disabled={selectedBusy} value={editDraft.command} onChange={(event) => setEditDraft({ ...editDraft, command: event.target.value })} />
+              <select disabled={selectedBusy} value={editDraft.kind} onChange={(event) => setEditDraft({ ...editDraft, kind: event.target.value as CommandKind })}>
+                <option value="task">一次性命令</option>
+                <option value="long-running">长期运行命令</option>
+              </select>
+              <div className="command-actions">
+                <button disabled={selectedBusy || !selectedDirty} onClick={() => void saveSelected()}>
+                  <Save size={15} /> 保存
+                </button>
+                <button className="primary-button" disabled={selectedBusy} onClick={() => void window.serveManager.runCommand(selected.id)}>
+                  <Play size={15} /> 运行
+                </button>
+                <button disabled={!selectedRunning} onClick={() => void window.serveManager.stopCommand(selected.id)}>
+                  <Square size={15} /> 停止
+                </button>
+                <button onClick={() => void window.serveManager.clearCommandLogs(selected.id).then(() => setLogs([]))}>
+                  <Trash2 size={15} /> 清日志
+                </button>
+                <button
+                  disabled={selectedBusy}
+                  onClick={() => {
+                    if (window.confirm(`删除命令「${selected.name}」？`)) {
+                      void window.serveManager.deleteCommand(selected.id).then(loadCommands);
+                    }
+                  }}
+                >
+                  删除
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="empty-command">还没有命令</div>
+          )}
+
+          <div className="new-command">
+            <input value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="命令名" />
+            <input value={draft.command} onChange={(event) => setDraft({ ...draft, command: event.target.value })} placeholder="命令内容，比如 pnpm build" />
+            <select value={draft.kind} onChange={(event) => setDraft({ ...draft, kind: event.target.value as CommandKind })}>
+              <option value="task">一次性命令</option>
+              <option value="long-running">长期运行命令</option>
+            </select>
+            <button className="primary-button" onClick={() => void saveDraft()}>
+              <Plus size={15} /> 新增
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section className="command-logs">
+        <header>
+          <strong>{selected ? `${selected.name} 日志` : "命令日志"}</strong>
+          <button onClick={() => void navigator.clipboard.writeText(logText)}>
+            <Copy size={15} /> 复制
+          </button>
+        </header>
+        <pre>
+          {logs.map((entry) => (
+            <span className={`log-line ${entry.stream}`} key={entry.id}>
+              [{entry.stream}] {entry.content}
+            </span>
+          ))}
+        </pre>
+      </section>
+    </aside>
   );
 }
 

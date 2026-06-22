@@ -51,6 +51,8 @@ button:disabled {
 .toolbar select,
 .draft-fields input,
 .draft-fields select,
+.command-detail input,
+.command-detail select,
 .service-editor select,
 .import-dialog input {
   min-width: 0;
@@ -64,6 +66,7 @@ button:disabled {
 .primary-button,
 .tool-button,
 .row-actions button,
+.commands-drawer button,
 .logs-drawer button,
 .modal-backdrop button {
   min-height: 34px;
@@ -111,6 +114,7 @@ button:disabled {
 }
 
 .project-heading h2,
+.commands-drawer h2,
 .logs-drawer h2,
 .import-dialog h2,
 .service-editor h2 {
@@ -119,6 +123,7 @@ button:disabled {
 }
 
 .project-heading p,
+.commands-drawer p,
 .logs-drawer p,
 .import-dialog p {
   margin: 0;
@@ -139,7 +144,7 @@ button:disabled {
 
 .service-row {
   display: grid;
-  grid-template-columns: 10px minmax(170px, 1.3fr) 130px 64px minmax(220px, 1fr) minmax(120px, 0.7fr) 178px;
+  grid-template-columns: 10px minmax(170px, 1.3fr) 130px 64px minmax(220px, 1fr) minmax(120px, 0.7fr) 218px;
   align-items: center;
   gap: 10px;
   min-height: 48px;
@@ -251,6 +256,139 @@ button:disabled {
   gap: 10px;
 }
 
+.commands-drawer {
+  position: fixed;
+  inset: 0 0 0 auto;
+  width: min(740px, 100vw);
+  display: grid;
+  grid-template-rows: auto minmax(270px, auto) 1fr;
+  background: #ffffff;
+  color: #17202a;
+  box-shadow: -14px 0 40px rgba(17, 24, 39, 0.22);
+  z-index: 15;
+}
+
+.commands-drawer > header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px;
+  border-bottom: 1px solid #d8dee6;
+}
+
+.command-manager {
+  display: grid;
+  grid-template-columns: minmax(180px, 240px) 1fr;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid #d8dee6;
+  min-height: 0;
+}
+
+.command-list {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  max-height: 290px;
+  overflow: auto;
+}
+
+.command-list button {
+  min-height: 48px;
+  display: grid;
+  justify-items: start;
+  gap: 2px;
+  padding: 7px 9px;
+  text-align: left;
+}
+
+.command-list button.selected {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+
+.command-list span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 650;
+}
+
+.command-list small {
+  color: #596575;
+  font-size: 12px;
+}
+
+.command-detail {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+}
+
+.command-detail input,
+.command-detail select {
+  width: 100%;
+}
+
+.command-actions,
+.new-command,
+.command-logs header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.command-actions {
+  flex-wrap: wrap;
+}
+
+.new-command {
+  display: grid;
+  grid-template-columns: minmax(110px, 0.8fr) minmax(180px, 1.4fr) 140px auto;
+  margin-top: 10px;
+}
+
+.command-logs {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  background: #111827;
+  color: #f9fafb;
+}
+
+.command-logs header {
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid #374151;
+}
+
+.command-logs button {
+  border-color: #4b5563;
+  background: #1f2937;
+  color: #f9fafb;
+}
+
+.command-logs pre {
+  margin: 0;
+  overflow: auto;
+  padding: 14px;
+  white-space: pre-wrap;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.empty-command {
+  min-height: 108px;
+  display: grid;
+  place-items: center;
+  border: 1px dashed #b9c3cf;
+  border-radius: 8px;
+  color: #596575;
+}
+
 .logs-drawer {
   position: fixed;
   inset: 0 0 0 auto;
@@ -335,6 +473,19 @@ button:disabled {
   .row-actions {
     grid-column: 2 / -1;
     justify-content: flex-start;
+  }
+
+  .commands-drawer {
+    grid-template-rows: auto auto 1fr;
+  }
+
+  .command-manager,
+  .new-command {
+    grid-template-columns: 1fr;
+  }
+
+  .command-list {
+    max-height: 190px;
   }
 
   .draft-fields,

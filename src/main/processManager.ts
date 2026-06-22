@@ -3,7 +3,7 @@ import { BrowserWindow } from "electron";
 import type { ChildProcess } from "node:child_process";
 import { createServer } from "node:net";
 import kill from "tree-kill";
-import type { LogEntry, PortCheck, Service } from "@shared/types";
+import type { CommandLogEntry, LogEntry, PortCheck, Service, ServiceCommand } from "@shared/types";
 import { resolveLaunchCommand } from "./commandResolver";
 import type { AppDatabase } from "./database";
 
@@ -11,6 +11,15 @@ interface RunningService {
   child: ChildProcess;
   serviceId: number;
 }
+
+const cleanCommandEnv = (): NodeJS.ProcessEnv => {
+  const env: NodeJS.ProcessEnv = { ...process.env };
+  delete env.ELECTRON_RUN_AS_NODE;
+  delete env.ELECTRON_RENDERER_URL;
+  delete env.ELECTRON_ENABLE_LOGGING;
+  delete env.ELECTRON_NO_ATTACH_CONSOLE;
+  return env;
+};
 
 const canListen = (port: number): Promise<boolean> =>
   new Promise((resolve) => {
@@ -31,11 +40,12 @@ export const checkPort = async (requestedPort: number): Promise<PortCheck> => {
 
 export class ProcessManager {
   private readonly running = new Map<number, RunningService>();
+  private readonly runningCommands = new Map<number, RunningService>();
 
   constructor(private readonly database: AppDatabase) {}
 
   hasRunning(): boolean {
-    return this.running.size > 0;
+    return this.running.size > 0 || this.runningCommands.size > 0;
   }
 
   async start(service: Service): Promise<PortCheck | null> {
@@ -97,7 +107,10 @@ export class ProcessManager {
   }
 
   async stopAll(): Promise<void> {
-    await Promise.all(Array.from(this.running.keys()).map((serviceId) => this.stop(serviceId)));
+    await Promise.all([
+      ...Array.from(this.running.keys()).map((serviceId) => this.stop(serviceId)),
+      ...Array.from(this.runningCommands.keys()).map((commandId) => this.stopCommand(commandId))
+    ]);
   }
 
   runInstall(service: Service, command: string): void {
@@ -108,6 +121,57 @@ export class ProcessManager {
     child.once("exit", (code) => this.log(service.id, "system", `依赖安装结束，退出码：${code ?? "unknown"}\n`));
   }
 
+  runCommand(command: ServiceCommand, service: Service): void {
+    if (this.runningCommands.has(command.id)) return;
+    if (!command.command.trim()) throw new Error("命令为空");
+
+    this.emitCommand(this.database.setCommandStatus(command.id, "running"));
+    this.commandLog(command.id, "system", `工作目录：${service.servicePath}\n执行命令：${command.command}\n`);
+    const child = crossSpawn(command.command, {
+      cwd: service.servicePath,
+      env: cleanCommandEnv(),
+      shell: true,
+      windowsHide: true
+    });
+
+    this.runningCommands.set(command.id, { child, serviceId: service.id });
+    child.stdout?.on("data", (chunk) => this.commandLog(command.id, "stdout", chunk.toString()));
+    child.stderr?.on("data", (chunk) => this.commandLog(command.id, "stderr", chunk.toString()));
+    child.once("error", (error) => {
+      this.runningCommands.delete(command.id);
+      this.commandLog(command.id, "system", `${error.message}\n`);
+      this.emitCommand(this.database.setCommandStatus(command.id, "failed"));
+    });
+    child.once("exit", (code) => {
+      this.runningCommands.delete(command.id);
+      this.commandLog(command.id, "system", `命令已结束，退出码：${code ?? "unknown"}\n`);
+      this.emitCommand(this.database.setCommandStatus(command.id, code === 0 ? "finished" : "failed"));
+    });
+  }
+
+  stopCommand(commandId: number): Promise<void> {
+    const running = this.runningCommands.get(commandId);
+    if (!running) {
+      this.emitCommand(this.database.setCommandStatus(commandId, "idle"));
+      return Promise.resolve();
+    }
+
+    this.emitCommand(this.database.setCommandStatus(commandId, "stopping"));
+    return new Promise((resolve) => {
+      kill(running.child.pid ?? 0, "SIGTERM", (error) => {
+        this.runningCommands.delete(commandId);
+        if (error) {
+          this.commandLog(commandId, "system", `${error.message}\n`);
+          this.emitCommand(this.database.setCommandStatus(commandId, "failed"));
+        } else {
+          this.commandLog(commandId, "system", "命令已停止\n");
+          this.emitCommand(this.database.setCommandStatus(commandId, "idle"));
+        }
+        resolve();
+      });
+    });
+  }
+
   private log(serviceId: number, stream: LogEntry["stream"], content: string): void {
     const entry = this.database.appendLog(serviceId, stream, content);
     BrowserWindow.getAllWindows().forEach((window) => window.webContents.send("logs:entry", entry));
@@ -115,5 +179,14 @@ export class ProcessManager {
 
   private emitService(service: Service): void {
     BrowserWindow.getAllWindows().forEach((window) => window.webContents.send("service:changed", service));
+  }
+
+  private commandLog(commandId: number, stream: CommandLogEntry["stream"], content: string): void {
+    const entry = this.database.appendCommandLog(commandId, stream, content);
+    BrowserWindow.getAllWindows().forEach((window) => window.webContents.send("command-logs:entry", entry));
+  }
+
+  private emitCommand(command: ServiceCommand): void {
+    BrowserWindow.getAllWindows().forEach((window) => window.webContents.send("command:changed", command));
   }
 }

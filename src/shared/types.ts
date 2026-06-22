@@ -11,6 +11,8 @@ export type ServiceStack =
   | "custom";
 
 export type LogStream = "stdout" | "stderr" | "system";
+export type CommandKind = "task" | "long-running";
+export type CommandStatus = "idle" | "running" | "finished" | "failed" | "stopping";
 
 export interface Project {
   id: number;
@@ -44,6 +46,24 @@ export interface ServiceDraft {
   note: string;
 }
 
+export interface ServiceCommand {
+  id: number;
+  serviceId: number;
+  name: string;
+  command: string;
+  kind: CommandKind;
+  sortOrder: number;
+  lastStatus: CommandStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ServiceCommandDraft {
+  name: string;
+  command: string;
+  kind: CommandKind;
+}
+
 export interface ProjectWithServices extends Project {
   services: Service[];
 }
@@ -51,6 +71,14 @@ export interface ProjectWithServices extends Project {
 export interface LogEntry {
   id: number;
   serviceId: number;
+  timestamp: string;
+  stream: LogStream;
+  content: string;
+}
+
+export interface CommandLogEntry {
+  id: number;
+  commandId: number;
   timestamp: string;
   stream: LogStream;
   content: string;
@@ -89,6 +117,14 @@ export interface ServeManagerApi {
   saveService(input: ServiceDraft & { projectId: number }): Promise<Service>;
   updateService(input: Service): Promise<Service>;
   deleteService(serviceId: number): Promise<void>;
+  listCommands(serviceId: number): Promise<ServiceCommand[]>;
+  saveCommand(input: ServiceCommandDraft & { serviceId: number }): Promise<ServiceCommand>;
+  updateCommand(input: ServiceCommand): Promise<ServiceCommand>;
+  deleteCommand(commandId: number): Promise<void>;
+  runCommand(commandId: number): Promise<void>;
+  stopCommand(commandId: number): Promise<void>;
+  getCommandLogs(commandId: number): Promise<CommandLogEntry[]>;
+  clearCommandLogs(commandId: number): Promise<void>;
   checkDependencies(serviceId: number): Promise<DependencyCheck>;
   installDependencies(serviceId: number): Promise<void>;
   startService(serviceId: number): Promise<PortCheck | null>;
@@ -98,4 +134,6 @@ export interface ServeManagerApi {
   clearLogs(serviceId: number): Promise<void>;
   onLog(callback: (entry: LogEntry) => void): () => void;
   onServiceChanged(callback: (service: Service) => void): () => void;
+  onCommandLog(callback: (entry: CommandLogEntry) => void): () => void;
+  onCommandChanged(callback: (command: ServiceCommand) => void): () => void;
 }
