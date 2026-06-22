@@ -458,13 +458,22 @@ function CommandDrawer(props: { service: Service; onClose(): void }): JSX.Elemen
 
         <div className="command-detail">
           {selected ? (
-            <>
-              <input disabled={selectedBusy} value={editDraft.name} onChange={(event) => setEditDraft({ ...editDraft, name: event.target.value })} />
-              <input disabled={selectedBusy} value={editDraft.command} onChange={(event) => setEditDraft({ ...editDraft, command: event.target.value })} />
-              <select disabled={selectedBusy} value={editDraft.kind} onChange={(event) => setEditDraft({ ...editDraft, kind: event.target.value as CommandKind })}>
-                <option value="task">一次性命令</option>
-                <option value="long-running">长期运行命令</option>
-              </select>
+            <div className="command-editor">
+              <label className="field">
+                <span>名称</span>
+                <input disabled={selectedBusy} value={editDraft.name} onChange={(event) => setEditDraft({ ...editDraft, name: event.target.value })} />
+              </label>
+              <label className="field command-input">
+                <span>命令</span>
+                <input disabled={selectedBusy} value={editDraft.command} onChange={(event) => setEditDraft({ ...editDraft, command: event.target.value })} />
+              </label>
+              <label className="field">
+                <span>类型</span>
+                <select disabled={selectedBusy} value={editDraft.kind} onChange={(event) => setEditDraft({ ...editDraft, kind: event.target.value as CommandKind })}>
+                  <option value="task">一次性命令</option>
+                  <option value="long-running">长期运行命令</option>
+                </select>
+              </label>
               <div className="command-actions">
                 <button disabled={selectedBusy || !selectedDirty} onClick={() => void saveSelected()}>
                   <Save size={15} /> 保存
@@ -489,12 +498,13 @@ function CommandDrawer(props: { service: Service; onClose(): void }): JSX.Elemen
                   删除
                 </button>
               </div>
-            </>
+            </div>
           ) : (
             <div className="empty-command">还没有命令</div>
           )}
 
           <div className="new-command">
+            <strong>新增</strong>
             <input value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="命令名" />
             <input value={draft.command} onChange={(event) => setDraft({ ...draft, command: event.target.value })} placeholder="命令内容，比如 pnpm build" />
             <select value={draft.kind} onChange={(event) => setDraft({ ...draft, kind: event.target.value as CommandKind })}>
