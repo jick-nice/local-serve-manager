@@ -88,7 +88,8 @@ export const detectService = (servicePath: string): ServiceDraft => {
     stack: detection.stack,
     command: detection.command,
     port: detection.port,
-    note: detection.evidence.join(", ")
+    note: detection.evidence.join(", "),
+    environment: ""
   };
 };
 

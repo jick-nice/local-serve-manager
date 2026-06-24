@@ -12,6 +12,7 @@ const baseService: Service = {
   port: 8080,
   backendServiceId: null,
   note: "",
+  environment: "",
   sortOrder: 0,
   lastStatus: "stopped",
   createdAt: "2026-06-23T00:00:00.000Z",
@@ -39,5 +40,11 @@ describe("filterProjects", () => {
 
     expect(result).toHaveLength(1);
     expect(result[0].services).toHaveLength(1);
+  });
+
+  it("matches service environment text", () => {
+    const result = filterProjects([project(1, [{ ...baseService, environment: "TOKEN_SECRET=local" }])], "token_secret", "all");
+
+    expect(result).toHaveLength(1);
   });
 });

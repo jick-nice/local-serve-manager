@@ -8,6 +8,7 @@ import kill from "tree-kill";
 import type { CommandLogEntry, LogEntry, PortCheck, Service, ServiceCommand, StopPortResult } from "@shared/types";
 import { resolveLaunchCommand } from "./commandResolver";
 import type { AppDatabase } from "./database";
+import { cleanElectronEnv, mergeServiceEnvironment } from "./environment";
 import { decodeProcessOutput } from "./outputDecoder";
 
 interface RunningService {
@@ -17,14 +18,7 @@ interface RunningService {
 
 const execFileAsync = promisify(execFile);
 
-const cleanCommandEnv = (): NodeJS.ProcessEnv => {
-  const env: NodeJS.ProcessEnv = { ...process.env };
-  delete env.ELECTRON_RUN_AS_NODE;
-  delete env.ELECTRON_RENDERER_URL;
-  delete env.ELECTRON_ENABLE_LOGGING;
-  delete env.ELECTRON_NO_ATTACH_CONSOLE;
-  return env;
-};
+const serviceCommandEnv = (service: Service): NodeJS.ProcessEnv => mergeServiceEnvironment(cleanElectronEnv(), service.environment);
 
 const canListen = (port: number): Promise<boolean> =>
   new Promise((resolve) => {
@@ -187,7 +181,7 @@ export class ProcessManager {
 
   runInstall(service: Service, command: string): void {
     this.log(service.id, "system", `执行依赖安装：${command}\n`);
-    const child = crossSpawn(command, { cwd: service.servicePath, shell: true, windowsHide: true });
+    const child = crossSpawn(command, { cwd: service.servicePath, env: serviceCommandEnv(service), shell: true, windowsHide: true });
     child.stdout?.on("data", (chunk) => this.log(service.id, "stdout", decodeProcessOutput(chunk)));
     child.stderr?.on("data", (chunk) => this.log(service.id, "stderr", decodeProcessOutput(chunk)));
     child.once("exit", (code) => this.log(service.id, "system", `依赖安装结束，退出码：${code ?? "unknown"}\n`));
@@ -201,7 +195,7 @@ export class ProcessManager {
     this.commandLog(command.id, "system", `工作目录：${service.servicePath}\n执行命令：${command.command}\n`);
     const child = crossSpawn(command.command, {
       cwd: service.servicePath,
-      env: cleanCommandEnv(),
+      env: serviceCommandEnv(service),
       shell: true,
       windowsHide: true
     });

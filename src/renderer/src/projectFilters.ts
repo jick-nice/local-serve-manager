@@ -18,7 +18,8 @@ export const filterProjects = (
           service.name.toLowerCase().includes(lowered) ||
           service.servicePath.toLowerCase().includes(lowered) ||
           service.note.toLowerCase().includes(lowered) ||
-          service.command.toLowerCase().includes(lowered);
+          service.command.toLowerCase().includes(lowered) ||
+          service.environment.toLowerCase().includes(lowered);
         const matchesStatus = statusFilter === "all" || service.lastStatus === statusFilter;
         return matchesText && matchesStatus;
       })

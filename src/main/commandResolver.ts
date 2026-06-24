@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Service } from "@shared/types";
+import { cleanElectronEnv, mergeServiceEnvironment } from "./environment";
 
 export interface LaunchCommand {
   command: string;
@@ -80,12 +81,8 @@ const withBackendPort = (service: Service): string => {
 
 const withConfiguredPort = (service: Service): string => withBackendPort({ ...service, command: withFrontendPort(service) });
 
-const cleanChildEnv = (service: Service): NodeJS.ProcessEnv => {
-  const env: NodeJS.ProcessEnv = { ...process.env };
-  delete env.ELECTRON_RUN_AS_NODE;
-  delete env.ELECTRON_RENDERER_URL;
-  delete env.ELECTRON_ENABLE_LOGGING;
-  delete env.ELECTRON_NO_ATTACH_CONSOLE;
+const cleanChildEnv = (service: Service, baseEnv: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEnv => {
+  const env = mergeServiceEnvironment(cleanElectronEnv(baseEnv), service.environment);
 
   if (service.port) env.PORT = String(service.port);
   if (service.port && springBootStacks.has(service.stack)) env.SERVER_PORT = String(service.port);
@@ -98,7 +95,7 @@ const cleanChildEnv = (service: Service): NodeJS.ProcessEnv => {
   return env;
 };
 
-export const resolveLaunchCommand = (service: Service): LaunchCommand => ({
+export const resolveLaunchCommand = (service: Service, baseEnv: NodeJS.ProcessEnv = process.env): LaunchCommand => ({
   command: withConfiguredPort(service),
-  env: cleanChildEnv(service)
+  env: cleanChildEnv(service, baseEnv)
 });

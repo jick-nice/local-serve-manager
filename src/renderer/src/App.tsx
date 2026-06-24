@@ -231,7 +231,8 @@ export default function App(): JSX.Element {
                     command: service.command,
                     port: service.port,
                     backendServiceId: service.backendServiceId,
-                    note: service.note
+                    note: service.note,
+                    environment: service.environment
                   },
                   projectId: service.projectId,
                   service
@@ -662,7 +663,7 @@ function ServiceEditor(props: {
             ))}
           </select>
         </label>
-        <DraftFields draft={props.editor.draft} onChange={updateDraft} />
+        <DraftFields draft={props.editor.draft} onChange={updateDraft} showEnvironment />
         {isFrontend && (
           <label>
             关联后端服务
@@ -698,7 +699,7 @@ function ServiceEditor(props: {
   );
 }
 
-function DraftFields(props: { draft: ServiceDraft; onChange(draft: ServiceDraft): void; onRemove?(): void }): JSX.Element {
+function DraftFields(props: { draft: ServiceDraft; onChange(draft: ServiceDraft): void; onRemove?(): void; showEnvironment?: boolean }): JSX.Element {
   const set = (patch: Partial<ServiceDraft>): void => props.onChange({ ...props.draft, ...patch });
   return (
     <div className="draft-fields">
@@ -714,6 +715,14 @@ function DraftFields(props: { draft: ServiceDraft; onChange(draft: ServiceDraft)
       <input value={props.draft.command} onChange={(event) => set({ command: event.target.value })} placeholder="启动命令" />
       <input value={props.draft.port ?? ""} onChange={(event) => set({ port: event.target.value ? Number(event.target.value) : null })} placeholder="端口" />
       <input value={props.draft.note} onChange={(event) => set({ note: event.target.value })} placeholder="备注" />
+      {props.showEnvironment && (
+        <textarea
+          value={props.draft.environment ?? ""}
+          onChange={(event) => set({ environment: event.target.value })}
+          placeholder="环境变量 KEY=value，每行一个"
+          spellCheck={false}
+        />
+      )}
       {props.onRemove && <button onClick={props.onRemove}>删除</button>}
     </div>
   );

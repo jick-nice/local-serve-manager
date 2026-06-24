@@ -26,6 +26,7 @@ const service = (input: Partial<Service>): Service => ({
   port: 3007,
   backendServiceId: null,
   note: "",
+  environment: "",
   sortOrder: 0,
   lastStatus: "stopped",
   createdAt: "",
@@ -83,4 +84,50 @@ describe("resolveLaunchCommand", () => {
     expect(launch.command).toBe("mvn spring-boot:run -Dspring-boot.run.arguments=--server.port=9090");
   });
 
+  it("merges service environment variables without leaking into the command", () => {
+    const launch = resolveLaunchCommand(
+      service({
+        stack: "spring-maven",
+        command: "mvn spring-boot:run",
+        port: 8082,
+        environment: [
+          "TOKEN_SECRET=local-secret",
+          "CRYPTO_SECRET=crypto-secret",
+          "PATH=D:\\apache-maven-3.9.8\\bin;%PATH%"
+        ].join("\n")
+      }),
+      { PATH: "C:\\Windows\\System32" }
+    );
+
+    expect(launch.command).toBe("mvn spring-boot:run -Dspring-boot.run.arguments=--server.port=8082");
+    expect(launch.command).not.toContain("TOKEN_SECRET");
+    expect(launch.env.TOKEN_SECRET).toBe("local-secret");
+    expect(launch.env.CRYPTO_SECRET).toBe("crypto-secret");
+    expect(launch.env.PATH).toBe("D:\\apache-maven-3.9.8\\bin;C:\\Windows\\System32");
+  });
+
+  it("keeps the configured service port authoritative over custom environment text", () => {
+    const launch = resolveLaunchCommand(
+      service({
+        stack: "spring-maven",
+        command: "mvn spring-boot:run",
+        port: 9090,
+        environment: "SERVER_PORT=7777"
+      })
+    );
+
+    expect(launch.env.SERVER_PORT).toBe("9090");
+  });
+
+  it("updates existing Windows Path key without creating a duplicate PATH key", () => {
+    const launch = resolveLaunchCommand(
+      service({
+        environment: "PATH=D:\\tools;%PATH%"
+      }),
+      { Path: "C:\\Windows" }
+    );
+
+    expect(launch.env.Path).toBe("D:\\tools;C:\\Windows");
+    expect(launch.env.PATH).toBeUndefined();
+  });
 });

@@ -36,6 +36,7 @@ const mapService = (row: any): Service => ({
   port: row.port,
   backendServiceId: row.backend_service_id ?? null,
   note: row.note,
+  environment: row.environment ?? "",
   sortOrder: row.sort_order,
   lastStatus: row.last_status,
   createdAt: row.created_at,
@@ -96,6 +97,7 @@ export class AppDatabase {
         port INTEGER,
         backend_service_id INTEGER,
         note TEXT NOT NULL DEFAULT '',
+        environment TEXT NOT NULL DEFAULT '',
         sort_order INTEGER NOT NULL DEFAULT 0,
         last_status TEXT NOT NULL DEFAULT 'stopped',
         created_at TEXT NOT NULL,
@@ -177,7 +179,7 @@ export class AppDatabase {
     this.db
       .prepare(
         `UPDATE services
-         SET project_id = ?, name = ?, service_path = ?, stack = ?, command = ?, port = ?, backend_service_id = ?, note = ?, sort_order = ?, last_status = ?, updated_at = ?
+         SET project_id = ?, name = ?, service_path = ?, stack = ?, command = ?, port = ?, backend_service_id = ?, note = ?, environment = ?, sort_order = ?, last_status = ?, updated_at = ?
          WHERE id = ?`
       )
       .run(
@@ -189,6 +191,7 @@ export class AppDatabase {
         service.port,
         service.backendServiceId,
         service.note,
+        service.environment,
         service.sortOrder,
         service.lastStatus,
         timestamp,
@@ -300,8 +303,8 @@ export class AppDatabase {
     const result = this.db
       .prepare(
         `INSERT INTO services
-         (project_id, name, service_path, stack, command, port, backend_service_id, note, sort_order, last_status, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'stopped', ?, ?)`
+         (project_id, name, service_path, stack, command, port, backend_service_id, note, environment, sort_order, last_status, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'stopped', ?, ?)`
       )
       .run(
         projectId,
@@ -312,6 +315,7 @@ export class AppDatabase {
         draft.port,
         draft.backendServiceId ?? null,
         draft.note,
+        draft.environment,
         sortOrder,
         timestamp,
         timestamp
@@ -332,6 +336,9 @@ export class AppDatabase {
     const serviceColumns = this.db.prepare("PRAGMA table_info(services)").all() as Array<{ name: string }>;
     if (!serviceColumns.some((column) => column.name === "backend_service_id")) {
       this.db.exec("ALTER TABLE services ADD COLUMN backend_service_id INTEGER");
+    }
+    if (!serviceColumns.some((column) => column.name === "environment")) {
+      this.db.exec("ALTER TABLE services ADD COLUMN environment TEXT NOT NULL DEFAULT ''");
     }
   }
 

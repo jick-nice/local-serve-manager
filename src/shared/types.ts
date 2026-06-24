@@ -32,6 +32,7 @@ export interface Service {
   port: number | null;
   backendServiceId: number | null;
   note: string;
+  environment: string;
   sortOrder: number;
   lastStatus: ServiceStatus;
   createdAt: string;
@@ -46,6 +47,7 @@ export interface ServiceDraft {
   port: number | null;
   backendServiceId?: number | null;
   note: string;
+  environment: string;
 }
 
 export interface ServiceCommand {

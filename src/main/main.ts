@@ -55,7 +55,8 @@ const serviceToDraft = (service: Service): ServiceDraft => ({
   command: service.command,
   port: service.port,
   backendServiceId: service.backendServiceId,
-  note: service.note
+  note: service.note,
+  environment: service.environment
 });
 
 const syncServiceConfigs = (service: Service): void => {

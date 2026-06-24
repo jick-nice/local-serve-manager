@@ -41,7 +41,8 @@ body {
 
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
 }
 
@@ -51,15 +52,16 @@ button {
 
 button:disabled,
 input:disabled,
-select:disabled {
+select:disabled,
+textarea:disabled {
   cursor: not-allowed;
   opacity: 0.48;
 }
 
 input,
-select {
+select,
+textarea {
   min-width: 0;
-  height: 38px;
   border: 1px solid var(--border-strong);
   border-radius: 7px;
   background-color: var(--surface);
@@ -71,8 +73,20 @@ select {
   transition-timing-function: ease-out;
 }
 
+input,
+select {
+  height: 38px;
+}
+
 input {
   padding: 0 11px;
+}
+
+textarea {
+  min-height: 82px;
+  padding: 9px 11px;
+  line-height: 1.45;
+  resize: vertical;
 }
 
 select {
@@ -89,7 +103,8 @@ select {
 }
 
 input:focus,
-select:focus {
+select:focus,
+textarea:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
 }
@@ -422,9 +437,14 @@ button:not(:disabled):active {
 
 .draft-fields input,
 .draft-fields select,
+.draft-fields textarea,
 .service-editor select,
 .import-dialog input {
   width: 100%;
+}
+
+.draft-fields textarea {
+  grid-column: 1 / -1;
 }
 
 .service-editor .draft-fields {

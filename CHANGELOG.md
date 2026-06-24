@@ -2,6 +2,40 @@
 
 All notable changes to Local Server Manager / 本地服务管理器 are documented in this file.
 
+## 1.0.8 - 2026-06-24
+
+### English
+
+#### Added
+
+- Added per-service environment variables in the service editor. Values use one `KEY=value` entry per line and are applied to service starts, dependency install commands, and service command runs.
+- Environment values support `%NAME%` and `${NAME}` expansion, so Windows users can set entries such as `PATH=D:\apache-maven-3.9.8\bin;%PATH%` without changing the global Spring Boot launch logic.
+
+#### Fixed
+
+- Spring Boot services that require local secrets such as `TOKEN_SECRET` can now be launched from Local Server Manager without putting secrets in the command text or logs.
+- Service-specific environment variables no longer override the configured service port; the app-managed `PORT` / `SERVER_PORT` values remain authoritative.
+
+#### Tests
+
+- Added regression coverage for service environment merging, PATH expansion, port precedence, and environment-text filtering.
+
+### 简体中文
+
+#### 新增
+
+- 服务编辑器新增服务级环境变量配置，每行一个 `KEY=value`，会应用到服务启动、依赖安装和该服务的命令运行。
+- 环境变量支持 `%NAME%` 和 `${NAME}` 引用，Windows 用户可以配置 `PATH=D:\apache-maven-3.9.8\bin;%PATH%`，不需要改动所有 Spring Boot 启动逻辑。
+
+#### 修复
+
+- 需要 `TOKEN_SECRET` 等本地密钥的 Spring Boot 服务，现在可以通过服务级环境变量启动，不必把密钥写进启动命令或日志。
+- 服务级环境变量不会覆盖软件配置的服务端口，`PORT` / `SERVER_PORT` 仍以界面配置为准。
+
+#### 测试
+
+- 新增服务环境变量合并、PATH 展开、端口优先级和环境变量搜索过滤的回归测试。
+
 ## 1.0.7 - 2026-06-24
 
 ### English

@@ -26,6 +26,7 @@ const service = (input: Partial<Service>): Service => ({
   port: 5179,
   backendServiceId: null,
   note: "",
+  environment: "",
   sortOrder: 0,
   lastStatus: "stopped",
   createdAt: "",

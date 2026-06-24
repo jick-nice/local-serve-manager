@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <img alt="Version" src="https://img.shields.io/badge/version-1.0.7-2563eb" />
+  <img alt="Version" src="https://img.shields.io/badge/version-1.0.8-2563eb" />
   <img alt="Platform" src="https://img.shields.io/badge/platform-Windows-0078d4" />
   <img alt="Electron" src="https://img.shields.io/badge/Electron-33-47848f" />
   <img alt="License" src="https://img.shields.io/badge/license-MIT-16a34a" />
@@ -31,6 +31,7 @@ Local Server Manager is a desktop tool for developers who run many local project
 - **Project-based service list**: group frontend and backend services under the same local project.
 - **Automatic stack detection**: detect React, Vue, Flutter, Flask, FastAPI, Uvicorn, Spring Boot with Maven, and Spring Boot with Gradle.
 - **Smart launch commands**: infer common development commands and pass configured ports to frontend and backend dev servers when possible.
+- **Service environment variables**: set per-service `KEY=value` entries for local secrets, tool paths, and project-specific runtime configuration.
 - **Configuration sync**: update common frontend and backend config files when service ports or linked backend ports change.
 - **Custom commands**: manage one-off tasks and long-running commands for each service.
 - **Independent logs**: service logs and command logs are stored separately and can be copied or cleared.
@@ -56,7 +57,7 @@ Local Server Manager is a desktop tool for developers who run many local project
 Download the Windows installer from the release artifacts:
 
 ```text
-本地服务管理器 Setup 1.0.7.exe
+本地服务管理器 Setup 1.0.8.exe
 ```
 
 Run the installer and launch **本地服务管理器** from the desktop shortcut or the Start Menu.
@@ -66,10 +67,11 @@ Run the installer and launch **本地服务管理器** from the desktop shortcut
 1. Click **Add Project** and choose a local project folder.
 2. Review detected services and save the project.
 3. Set or adjust service ports when needed.
-4. Click the play button to start a service.
-5. Open **Logs** to inspect service output.
-6. Open **Commands** to run scripts such as install, build, test, clean, or custom commands.
-7. Use **Stop by Port** to stop a process that was not started by this app.
+4. Edit a service and add environment variables such as `TOKEN_SECRET=...` or `PATH=D:\apache-maven-3.9.8\bin;%PATH%` when a project needs them.
+5. Click the play button to start a service.
+6. Open **Logs** to inspect service output.
+7. Open **Commands** to run scripts such as install, build, test, clean, or custom commands.
+8. Use **Stop by Port** to stop a process that was not started by this app.
 
 ### Development
 
@@ -139,6 +141,7 @@ MIT
 - **按项目管理服务**：一个项目下统一管理前端、后端和其他本地服务。
 - **自动识别技术栈**：支持 React、Vue、Flutter、Flask、FastAPI、Uvicorn、Spring Boot Maven、Spring Boot Gradle。
 - **自动推断启动命令**：识别常见开发命令，并尽量把配置端口传给前端和后端开发服务器。
+- **服务级环境变量**：每个服务可单独配置 `KEY=value`，用于本地密钥、工具路径和项目运行参数。
 - **配置文件同步**：服务端口或关联后端端口变化时，同步更新常见前后端配置文件。
 - **服务命令管理**：每个服务可以维护一次性命令和长期运行命令。
 - **独立日志**：服务日志和命令日志分开保存、复制和清理。
@@ -164,7 +167,7 @@ MIT
 从 release 产物中下载安装包：
 
 ```text
-本地服务管理器 Setup 1.0.7.exe
+本地服务管理器 Setup 1.0.8.exe
 ```
 
 安装完成后，可以从桌面快捷方式或开始菜单启动 **本地服务管理器**。
@@ -174,10 +177,11 @@ MIT
 1. 点击 **添加项目**，选择本地项目目录。
 2. 检查自动扫描出的服务并保存项目。
 3. 按需调整服务端口。
-4. 点击播放按钮启动服务。
-5. 打开 **日志** 查看服务输出。
-6. 打开 **命令** 运行 install、build、test、clean 或自定义命令。
-7. 使用 **按端口停止** 停止不是由本软件启动的本地服务。
+4. 编辑服务并补充环境变量，比如 `TOKEN_SECRET=...` 或 `PATH=D:\apache-maven-3.9.8\bin;%PATH%`。
+5. 点击播放按钮启动服务。
+6. 打开 **日志** 查看服务输出。
+7. 打开 **命令** 运行 install、build、test、clean 或自定义命令。
+8. 使用 **按端口停止** 停止不是由本软件启动的本地服务。
 
 ### 本地开发
 
