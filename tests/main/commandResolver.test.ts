@@ -24,6 +24,7 @@ const service = (input: Partial<Service>): Service => ({
   stack: "react",
   command: "npm run dev",
   port: 3007,
+  backendServiceId: null,
   note: "",
   sortOrder: 0,
   lastStatus: "stopped",
@@ -57,11 +58,29 @@ describe("resolveLaunchCommand", () => {
     expect(launch.command).toBe("pnpm dev --port 3007");
   });
 
-  it("does not rewrite backend commands", () => {
+  it("passes FastAPI ports through uvicorn commands", () => {
     const launch = resolveLaunchCommand(
-      service({ stack: "fastapi", command: "uvicorn main:app --reload --port 8000", port: 8000 })
+      service({ stack: "fastapi", command: "uvicorn main:app --reload --port 8000", port: 9001 })
     );
 
-    expect(launch.command).toBe("uvicorn main:app --reload --port 8000");
+    expect(launch.command).toBe("uvicorn main:app --reload --port 9001");
   });
+
+  it("passes Spring Boot Maven ports as command line arguments", () => {
+    const launch = resolveLaunchCommand(
+      service({ stack: "spring-maven", command: "mvn spring-boot:run", port: 9090 })
+    );
+
+    expect(launch.command).toBe("mvn spring-boot:run -Dspring-boot.run.arguments=--server.port=9090");
+    expect(launch.env.SERVER_PORT).toBe("9090");
+  });
+
+  it("replaces existing Spring Boot port arguments", () => {
+    const launch = resolveLaunchCommand(
+      service({ stack: "spring-maven", command: "mvn spring-boot:run -Dspring-boot.run.arguments=--server.port=8080", port: 9090 })
+    );
+
+    expect(launch.command).toBe("mvn spring-boot:run -Dspring-boot.run.arguments=--server.port=9090");
+  });
+
 });

@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
-import { Copy, FileText, FolderPlus, Pencil, Play, Plus, Save, Square, Terminal, Trash2, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Copy, FileText, FolderPlus, Hash, Pencil, Play, Plus, Save, Square, Terminal, Trash2, X } from "lucide-react";
 import { STACK_LABELS } from "@shared/serviceDefaults";
+import { filterProjects, type StatusFilter } from "./projectFilters";
 import type {
   CommandKind,
   CommandLogEntry,
@@ -12,10 +13,7 @@ import type {
   ServiceCommandDraft,
   ServiceDraft,
   ServiceStack,
-  ServiceStatus
 } from "@shared/types";
-
-type StatusFilter = ServiceStatus | "all";
 
 interface EditorState {
   title: string;
@@ -31,6 +29,8 @@ interface ImportState {
 }
 
 const stackOptions = Object.keys(STACK_LABELS) as ServiceStack[];
+const frontendStackOptions: ServiceStack[] = ["react", "vue"];
+const backendStackOptions: ServiceStack[] = ["flask", "fastapi", "spring-maven", "spring-gradle"];
 const COMMAND_STATUS_LABELS: Record<CommandStatus, string> = {
   idle: "空闲",
   running: "运行中",
@@ -54,6 +54,10 @@ export default function App(): JSX.Element {
   const [activeLogService, setActiveLogService] = useState<Service | null>(null);
   const [activeCommandService, setActiveCommandService] = useState<Service | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [portStopValue, setPortStopValue] = useState("");
+  const [portStopBusy, setPortStopBusy] = useState(false);
+  const [portStopMessage, setPortStopMessage] = useState("");
+  const [portStopSucceeded, setPortStopSucceeded] = useState<boolean | null>(null);
 
   const reload = async (): Promise<void> => {
     const snapshot = await window.serveManager.getSnapshot();
@@ -90,22 +94,7 @@ export default function App(): JSX.Element {
   }, [activeLogService?.id]);
 
   const filteredProjects = useMemo(() => {
-    const lowered = query.trim().toLowerCase();
-    return projects
-      .map((project) => ({
-        ...project,
-        services: project.services.filter((service) => {
-          const matchesText =
-            !lowered ||
-            service.name.toLowerCase().includes(lowered) ||
-            service.servicePath.toLowerCase().includes(lowered) ||
-            service.note.toLowerCase().includes(lowered) ||
-            service.command.toLowerCase().includes(lowered);
-          const matchesStatus = statusFilter === "all" || service.lastStatus === statusFilter;
-          return matchesText && matchesStatus;
-        })
-      }))
-      .filter((project) => project.services.length > 0 || (!lowered && statusFilter === "all"));
+    return filterProjects(projects, query, statusFilter);
   }, [projects, query, statusFilter]);
 
   const addProject = async (): Promise<void> => {
@@ -156,6 +145,30 @@ export default function App(): JSX.Element {
     await reload();
   };
 
+  const stopPort = async (): Promise<void> => {
+    const port = Number(portStopValue.trim());
+    if (!Number.isInteger(port) || port < 1 || port > 65535) {
+      setPortStopSucceeded(false);
+      setPortStopMessage("请输入 1-65535 之间的端口号");
+      return;
+    }
+
+    setPortStopBusy(true);
+    setPortStopSucceeded(null);
+    setPortStopMessage(`正在停止端口 ${port}...`);
+    try {
+      const result = await window.serveManager.stopPort(port);
+      setPortStopSucceeded(result.success);
+      setPortStopMessage(result.message);
+      await reload();
+    } catch (error) {
+      setPortStopSucceeded(false);
+      setPortStopMessage(error instanceof Error ? error.message : "停止端口失败");
+    } finally {
+      setPortStopBusy(false);
+    }
+  };
+
   return (
     <main className="app-shell">
       <Toolbar
@@ -167,6 +180,34 @@ export default function App(): JSX.Element {
         onAddService={() => void addService()}
         onStopAll={() => void window.serveManager.stopAllServices().then(reload)}
       />
+
+      <section className="port-stop-panel" aria-label="按端口停止服务">
+        <div className="port-stop-title">
+          <Hash size={16} />
+          <span>按端口停止</span>
+        </div>
+        <input
+          inputMode="numeric"
+          value={portStopValue}
+          onChange={(event) => {
+            setPortStopValue(event.target.value.replace(/[^\d]/g, ""));
+            setPortStopMessage("");
+            setPortStopSucceeded(null);
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") void stopPort();
+          }}
+          placeholder="输入端口号"
+        />
+        <button className="tool-button danger" disabled={portStopBusy || portStopValue.trim() === ""} onClick={() => void stopPort()}>
+          <Square size={15} /> {portStopBusy ? "停止中" : "停止端口"}
+        </button>
+        {portStopMessage && (
+          <span className={`port-stop-message ${portStopSucceeded === true ? "success" : portStopSucceeded === false ? "danger" : ""}`}>
+            {portStopMessage}
+          </span>
+        )}
+      </section>
 
       <section className="content-shell">
         {filteredProjects.length === 0 ? (
@@ -189,6 +230,7 @@ export default function App(): JSX.Element {
                     stack: service.stack,
                     command: service.command,
                     port: service.port,
+                    backendServiceId: service.backendServiceId,
                     note: service.note
                   },
                   projectId: service.projectId,
@@ -366,6 +408,7 @@ function CommandDrawer(props: { service: Service; onClose(): void }): JSX.Elemen
   const [logs, setLogs] = useState<CommandLogEntry[]>([]);
   const [draft, setDraft] = useState<ServiceCommandDraft>({ name: "", command: "", kind: "task" });
   const [editDraft, setEditDraft] = useState<ServiceCommandDraft>({ name: "", command: "", kind: "task" });
+  const logEndRef = useRef<HTMLSpanElement | null>(null);
 
   const loadCommands = async (): Promise<void> => {
     const items = await window.serveManager.listCommands(props.service.id);
@@ -406,6 +449,10 @@ function CommandDrawer(props: { service: Service; onClose(): void }): JSX.Elemen
     }
     setEditDraft({ name: selected.name, command: selected.command, kind: selected.kind });
   }, [selected?.id]);
+
+  useEffect(() => {
+    logEndRef.current?.scrollIntoView({ block: "end" });
+  }, [logs.length, selected?.id]);
 
   const saveDraft = async (): Promise<void> => {
     if (!draft.name.trim() || !draft.command.trim()) return;
@@ -531,6 +578,7 @@ function CommandDrawer(props: { service: Service; onClose(): void }): JSX.Elemen
               [{entry.stream}] {entry.content}
             </span>
           ))}
+          <span ref={logEndRef} />
         </pre>
       </section>
     </aside>
@@ -586,6 +634,20 @@ function ServiceEditor(props: {
   onCancel(): void;
   onSave(): void;
 }): JSX.Element {
+  const isFrontend = frontendStackOptions.includes(props.editor.draft.stack);
+  const backendOptions = props.projects.flatMap((project) =>
+    project.services
+      .filter((service) => service.id !== props.editor.service?.id && backendStackOptions.includes(service.stack))
+      .map((service) => ({ ...service, projectName: project.name }))
+  );
+  const updateDraft = (draft: ServiceDraft): void => {
+    const nextIsFrontend = frontendStackOptions.includes(draft.stack);
+    props.setEditor({
+      ...props.editor,
+      draft: nextIsFrontend ? draft : { ...draft, backendServiceId: null }
+    });
+  };
+
   return (
     <div className="modal-backdrop">
       <section className="service-editor">
@@ -600,7 +662,31 @@ function ServiceEditor(props: {
             ))}
           </select>
         </label>
-        <DraftFields draft={props.editor.draft} onChange={(draft) => props.setEditor({ ...props.editor, draft })} />
+        <DraftFields draft={props.editor.draft} onChange={updateDraft} />
+        {isFrontend && (
+          <label>
+            关联后端服务
+            <select
+              value={props.editor.draft.backendServiceId ?? ""}
+              onChange={(event) =>
+                props.setEditor({
+                  ...props.editor,
+                  draft: {
+                    ...props.editor.draft,
+                    backendServiceId: event.target.value ? Number(event.target.value) : null
+                  }
+                })
+              }
+            >
+              <option value="">不关联</option>
+              {backendOptions.map((service) => (
+                <option key={service.id} value={service.id}>
+                  {service.projectName} / {service.name}{service.port ? ` :${service.port}` : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <footer>
           <button onClick={props.onCancel}>取消</button>
           <button className="primary-button" onClick={props.onSave}>
@@ -634,7 +720,12 @@ function DraftFields(props: { draft: ServiceDraft; onChange(draft: ServiceDraft)
 }
 
 function LogsDrawer(props: { service: Service; logs: LogEntry[]; onClose(): void; onClear(): void }): JSX.Element {
+  const logEndRef = useRef<HTMLSpanElement | null>(null);
   const text = props.logs.map((entry) => `[${entry.stream}] ${entry.content}`).join("");
+  useEffect(() => {
+    logEndRef.current?.scrollIntoView({ block: "end" });
+  }, [props.logs.length, props.service.id]);
+
   return (
     <aside className="logs-drawer">
       <header>
@@ -660,6 +751,7 @@ function LogsDrawer(props: { service: Service; logs: LogEntry[]; onClose(): void
             [{entry.stream}] {entry.content}
           </span>
         ))}
+        <span ref={logEndRef} />
       </pre>
     </aside>
   );

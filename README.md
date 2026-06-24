@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <img alt="Version" src="https://img.shields.io/badge/version-1.0.2-2563eb" />
+  <img alt="Version" src="https://img.shields.io/badge/version-1.0.7-2563eb" />
   <img alt="Platform" src="https://img.shields.io/badge/platform-Windows-0078d4" />
   <img alt="Electron" src="https://img.shields.io/badge/Electron-33-47848f" />
   <img alt="License" src="https://img.shields.io/badge/license-MIT-16a34a" />
@@ -30,10 +30,11 @@ Local Server Manager is a desktop tool for developers who run many local project
 
 - **Project-based service list**: group frontend and backend services under the same local project.
 - **Automatic stack detection**: detect React, Vue, Flutter, Flask, FastAPI, Uvicorn, Spring Boot with Maven, and Spring Boot with Gradle.
-- **Smart launch commands**: infer common development commands and pass frontend ports to dev servers when possible.
+- **Smart launch commands**: infer common development commands and pass configured ports to frontend and backend dev servers when possible.
+- **Configuration sync**: update common frontend and backend config files when service ports or linked backend ports change.
 - **Custom commands**: manage one-off tasks and long-running commands for each service.
 - **Independent logs**: service logs and command logs are stored separately and can be copied or cleared.
-- **Port control**: configure service ports and get a suggested fallback when a port is occupied.
+- **Port control**: configure service ports, get a suggested fallback when a port is occupied, and stop external services directly by port.
 - **Local-first design**: data is stored locally with SQLite; runtime logs are cleared when the app exits.
 - **Windows installer**: packaged with Electron Builder and NSIS.
 
@@ -55,7 +56,7 @@ Local Server Manager is a desktop tool for developers who run many local project
 Download the Windows installer from the release artifacts:
 
 ```text
-本地服务管理器 Setup 1.0.2.exe
+本地服务管理器 Setup 1.0.7.exe
 ```
 
 Run the installer and launch **本地服务管理器** from the desktop shortcut or the Start Menu.
@@ -68,6 +69,7 @@ Run the installer and launch **本地服务管理器** from the desktop shortcut
 4. Click the play button to start a service.
 5. Open **Logs** to inspect service output.
 6. Open **Commands** to run scripts such as install, build, test, clean, or custom commands.
+7. Use **Stop by Port** to stop a process that was not started by this app.
 
 ### Development
 
@@ -136,10 +138,11 @@ MIT
 
 - **按项目管理服务**：一个项目下统一管理前端、后端和其他本地服务。
 - **自动识别技术栈**：支持 React、Vue、Flutter、Flask、FastAPI、Uvicorn、Spring Boot Maven、Spring Boot Gradle。
-- **自动推断启动命令**：识别常见开发命令，并尽量把端口传给前端开发服务器。
+- **自动推断启动命令**：识别常见开发命令，并尽量把配置端口传给前端和后端开发服务器。
+- **配置文件同步**：服务端口或关联后端端口变化时，同步更新常见前后端配置文件。
 - **服务命令管理**：每个服务可以维护一次性命令和长期运行命令。
 - **独立日志**：服务日志和命令日志分开保存、复制和清理。
-- **端口管理**：可配置服务端口，端口冲突时给出建议端口。
+- **端口管理**：可配置服务端口，端口冲突时给出建议端口，也可以直接按端口停止外部服务。
 - **本地优先**：数据保存在本机 SQLite；运行日志会在应用退出时清理。
 - **Windows 安装包**：使用 Electron Builder 和 NSIS 打包。
 
@@ -161,7 +164,7 @@ MIT
 从 release 产物中下载安装包：
 
 ```text
-本地服务管理器 Setup 1.0.2.exe
+本地服务管理器 Setup 1.0.7.exe
 ```
 
 安装完成后，可以从桌面快捷方式或开始菜单启动 **本地服务管理器**。
@@ -174,6 +177,7 @@ MIT
 4. 点击播放按钮启动服务。
 5. 打开 **日志** 查看服务输出。
 6. 打开 **命令** 运行 install、build、test、clean 或自定义命令。
+7. 使用 **按端口停止** 停止不是由本软件启动的本地服务。
 
 ### 本地开发
 

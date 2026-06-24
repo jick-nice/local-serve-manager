@@ -30,6 +30,7 @@ export interface Service {
   stack: ServiceStack;
   command: string;
   port: number | null;
+  backendServiceId: number | null;
   note: string;
   sortOrder: number;
   lastStatus: ServiceStatus;
@@ -43,6 +44,7 @@ export interface ServiceDraft {
   stack: ServiceStack;
   command: string;
   port: number | null;
+  backendServiceId?: number | null;
   note: string;
 }
 
@@ -104,6 +106,13 @@ export interface PortCheck {
   suggestedPort: number | null;
 }
 
+export interface StopPortResult {
+  port: number;
+  success: boolean;
+  pids: number[];
+  message: string;
+}
+
 export interface AppSnapshot {
   projects: ProjectWithServices[];
 }
@@ -130,6 +139,7 @@ export interface ServeManagerApi {
   startService(serviceId: number): Promise<PortCheck | null>;
   stopService(serviceId: number): Promise<void>;
   stopAllServices(): Promise<void>;
+  stopPort(port: number): Promise<StopPortResult>;
   getLogs(serviceId: number): Promise<LogEntry[]>;
   clearLogs(serviceId: number): Promise<void>;
   onLog(callback: (entry: LogEntry) => void): () => void;

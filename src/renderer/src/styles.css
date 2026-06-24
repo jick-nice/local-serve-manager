@@ -186,6 +186,53 @@ button:not(:disabled):active {
   width: 100%;
 }
 
+.port-stop-panel {
+  min-height: 54px;
+  display: grid;
+  grid-template-columns: auto 150px auto minmax(220px, 1fr);
+  gap: 10px;
+  align-items: center;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(247, 249, 252, 0.86);
+}
+
+.port-stop-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #344054;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.port-stop-title svg {
+  color: var(--primary);
+}
+
+.port-stop-panel input {
+  width: 100%;
+  font-variant-numeric: tabular-nums;
+}
+
+.port-stop-message {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.port-stop-message.success {
+  color: var(--success);
+}
+
+.port-stop-message.danger {
+  color: var(--danger);
+}
+
 .content-shell {
   display: grid;
   gap: 12px;
@@ -651,6 +698,15 @@ button:not(:disabled):active {
 
   .brand,
   .toolbar input {
+    grid-column: 1 / -1;
+  }
+
+  .port-stop-panel {
+    grid-template-columns: 1fr auto;
+  }
+
+  .port-stop-title,
+  .port-stop-message {
     grid-column: 1 / -1;
   }
 

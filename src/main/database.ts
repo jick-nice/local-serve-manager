@@ -34,6 +34,7 @@ const mapService = (row: any): Service => ({
   stack: row.stack,
   command: row.command,
   port: row.port,
+  backendServiceId: row.backend_service_id ?? null,
   note: row.note,
   sortOrder: row.sort_order,
   lastStatus: row.last_status,
@@ -93,6 +94,7 @@ export class AppDatabase {
         stack TEXT NOT NULL,
         command TEXT NOT NULL,
         port INTEGER,
+        backend_service_id INTEGER,
         note TEXT NOT NULL DEFAULT '',
         sort_order INTEGER NOT NULL DEFAULT 0,
         last_status TEXT NOT NULL DEFAULT 'stopped',
@@ -138,6 +140,7 @@ export class AppDatabase {
         FOREIGN KEY(service_id) REFERENCES services(id) ON DELETE CASCADE
       );
     `);
+    this.migrateSchema();
   }
 
   listProjects(): ProjectWithServices[] {
@@ -174,7 +177,7 @@ export class AppDatabase {
     this.db
       .prepare(
         `UPDATE services
-         SET project_id = ?, name = ?, service_path = ?, stack = ?, command = ?, port = ?, note = ?, sort_order = ?, last_status = ?, updated_at = ?
+         SET project_id = ?, name = ?, service_path = ?, stack = ?, command = ?, port = ?, backend_service_id = ?, note = ?, sort_order = ?, last_status = ?, updated_at = ?
          WHERE id = ?`
       )
       .run(
@@ -184,6 +187,7 @@ export class AppDatabase {
         service.stack,
         service.command,
         service.port,
+        service.backendServiceId,
         service.note,
         service.sortOrder,
         service.lastStatus,
@@ -197,6 +201,10 @@ export class AppDatabase {
     const row = this.db.prepare("SELECT * FROM services WHERE id = ?").get(id);
     if (!row) throw new Error(`Service not found: ${id}`);
     return mapService(row);
+  }
+
+  listServicesByProject(projectId: number): Service[] {
+    return this.db.prepare("SELECT * FROM services WHERE project_id = ? ORDER BY sort_order ASC, id ASC").all(projectId).map(mapService);
   }
 
   deleteService(id: number): void {
@@ -292,10 +300,22 @@ export class AppDatabase {
     const result = this.db
       .prepare(
         `INSERT INTO services
-         (project_id, name, service_path, stack, command, port, note, sort_order, last_status, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'stopped', ?, ?)`
+         (project_id, name, service_path, stack, command, port, backend_service_id, note, sort_order, last_status, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'stopped', ?, ?)`
       )
-      .run(projectId, draft.name, draft.servicePath, draft.stack, draft.command, draft.port, draft.note, sortOrder, timestamp, timestamp);
+      .run(
+        projectId,
+        draft.name,
+        draft.servicePath,
+        draft.stack,
+        draft.command,
+        draft.port,
+        draft.backendServiceId ?? null,
+        draft.note,
+        sortOrder,
+        timestamp,
+        timestamp
+      );
     const service = this.getService(Number(result.lastInsertRowid));
     this.addDiscoveredCommands(service);
     return service;
@@ -306,6 +326,13 @@ export class AppDatabase {
       next_order: number;
     };
     return row.next_order;
+  }
+
+  private migrateSchema(): void {
+    const serviceColumns = this.db.prepare("PRAGMA table_info(services)").all() as Array<{ name: string }>;
+    if (!serviceColumns.some((column) => column.name === "backend_service_id")) {
+      this.db.exec("ALTER TABLE services ADD COLUMN backend_service_id INTEGER");
+    }
   }
 
   private addDiscoveredCommands(service: Service): void {

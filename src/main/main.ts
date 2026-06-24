@@ -1,6 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain, session } from "electron";
 import { basename, join } from "node:path";
 import type { Service, ServiceCommand, ServiceCommandDraft, ServiceDraft } from "@shared/types";
+import { syncConfigsForProject, syncConfigsForService } from "./configSync";
 import { AppDatabase } from "./database";
 import { checkDependencies, detectService, scanProject } from "./detector";
 import { ProcessManager } from "./processManager";
@@ -53,8 +54,13 @@ const serviceToDraft = (service: Service): ServiceDraft => ({
   stack: service.stack,
   command: service.command,
   port: service.port,
+  backendServiceId: service.backendServiceId,
   note: service.note
 });
+
+const syncServiceConfigs = (service: Service): void => {
+  syncConfigsForService(service, database.listProjects());
+};
 
 const registerIpc = (): void => {
   ipcMain.handle("app:get-snapshot", () => ({ projects: database.listProjects() }));
@@ -65,10 +71,22 @@ const registerIpc = (): void => {
   ipcMain.handle("project:scan", (_event, rootPath: string) => scanProject(rootPath));
   ipcMain.handle("service:detect", (_event, servicePath: string) => detectService(servicePath));
   ipcMain.handle("project:save", (_event, input: { name: string; rootPath: string; services: ServiceDraft[] }) =>
-    database.createProject(input.name || basename(input.rootPath), input.rootPath, input.services)
+    {
+      const project = database.createProject(input.name || basename(input.rootPath), input.rootPath, input.services);
+      syncConfigsForProject(project, database.listProjects());
+      return project;
+    }
   );
-  ipcMain.handle("service:save", (_event, input: ServiceDraft & { projectId: number }) => database.createService(input.projectId, input));
-  ipcMain.handle("service:update", (_event, input: Service) => database.updateService(input));
+  ipcMain.handle("service:save", (_event, input: ServiceDraft & { projectId: number }) => {
+    const service = database.createService(input.projectId, input);
+    syncServiceConfigs(service);
+    return service;
+  });
+  ipcMain.handle("service:update", (_event, input: Service) => {
+    const service = database.updateService(input);
+    syncServiceConfigs(service);
+    return service;
+  });
   ipcMain.handle("service:delete", (_event, serviceId: number) => database.deleteService(serviceId));
   ipcMain.handle("command:list", (_event, serviceId: number) => database.listCommands(serviceId));
   ipcMain.handle("command:save", (_event, input: ServiceCommandDraft & { serviceId: number }) => database.createCommand(input.serviceId, input));
@@ -87,9 +105,14 @@ const registerIpc = (): void => {
     const dependency = checkDependencies(serviceToDraft(service));
     if (dependency.installCommand) processManager.runInstall(service, dependency.installCommand);
   });
-  ipcMain.handle("service:start", (_event, serviceId: number) => processManager.start(database.getService(serviceId)));
+  ipcMain.handle("service:start", (_event, serviceId: number) => {
+    const service = database.getService(serviceId);
+    syncServiceConfigs(service);
+    return processManager.start(service);
+  });
   ipcMain.handle("service:stop", (_event, serviceId: number) => processManager.stop(serviceId));
   ipcMain.handle("service:stop-all", () => processManager.stopAll());
+  ipcMain.handle("port:stop", (_event, port: number) => processManager.stopPort(port));
   ipcMain.handle("logs:get", (_event, serviceId: number) => database.listLogs(serviceId));
   ipcMain.handle("logs:clear", (_event, serviceId: number) => database.clearLogs(serviceId));
 };

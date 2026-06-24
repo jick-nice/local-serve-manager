@@ -23,6 +23,7 @@ const api: ServeManagerApi = {
   startService: (serviceId) => ipcRenderer.invoke("service:start", serviceId),
   stopService: (serviceId) => ipcRenderer.invoke("service:stop", serviceId),
   stopAllServices: () => ipcRenderer.invoke("service:stop-all"),
+  stopPort: (port) => ipcRenderer.invoke("port:stop", port),
   getLogs: (serviceId) => ipcRenderer.invoke("logs:get", serviceId),
   clearLogs: (serviceId) => ipcRenderer.invoke("logs:clear", serviceId),
   onLog: (callback) => {
