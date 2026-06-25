@@ -69,6 +69,28 @@ describe("syncConfigsForService", () => {
     expect(readFileSync(join(root, "app.js"), "utf8")).toContain("http://localhost:9092/api/v1");
   });
 
+  it("rewrites bound frontend computed api urls when backend port changes", () => {
+    const frontend = service({ id: 1, stack: "vue", backendServiceId: 2 });
+    const backend = service({ id: 2, stack: "spring-maven", port: 9095, servicePath: join(root, "backend") });
+    const services = join(root, "src", "services");
+    mkdirSync(services, { recursive: true });
+    writeFileSync(
+      join(services, "http.ts"),
+      'const { protocol, hostname } = window.location;\n' +
+        'export const apiBase = `${protocol}//${hostname}:8082/api/v1`;\n' +
+        'export const fileBase = "http://localhost:8082/api/v1";\n' +
+        'export const ipv6Base = "http://[::1]:8082/api/v1";\n'
+    );
+
+    syncConfigsForService(backend, [project([frontend, backend])]);
+
+    const http = readFileSync(join(services, "http.ts"), "utf8");
+    expect(http).toContain("`${protocol}//${hostname}:9095/api/v1`");
+    expect(http).toContain("http://localhost:9095/api/v1");
+    expect(http).toContain("http://[::1]:9095/api/v1");
+    expect(http).not.toContain(":8082/api/v1");
+  });
+
   it("writes Spring Boot application.yml ports", () => {
     const resources = join(root, "src", "main", "resources");
     mkdirSync(resources, { recursive: true });

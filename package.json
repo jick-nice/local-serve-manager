@@ -1,6 +1,6 @@
 {
   "name": "local-server-manager",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "A lightweight Windows desktop app for managing local development services.",
   "author": "Local Server Manager contributors",
   "private": true,

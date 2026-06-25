@@ -2,6 +2,30 @@
 
 All notable changes to Local Server Manager / 本地服务管理器 are documented in this file.
 
+## 1.0.9 - 2026-06-25
+
+### English
+
+#### Fixed
+
+- Fixed a linked frontend/backend port sync issue where computed local API base URLs could keep using the old backend port after the backend service port changed.
+- Frontend config sync now rewrites localhost, `127.0.0.1`, `[::1]`, and `` `${protocol}//${hostname}:<port>/api/v1` `` style local API URLs to the bound backend port.
+
+#### Tests
+
+- Added regression coverage for syncing bound frontend API URLs when a backend service port changes.
+
+### 简体中文
+
+#### 修复
+
+- 修复前端已绑定后端时，后端端口修改后，前端计算型本地 API 地址仍请求旧后端端口的问题。
+- 前端配置同步现在会把 localhost、`127.0.0.1`、`[::1]` 以及 `` `${protocol}//${hostname}:<port>/api/v1` `` 这类本地 API 地址同步到绑定后端端口。
+
+#### 测试
+
+- 新增后端端口变化后，同步绑定前端 API 地址的回归测试。
+
 ## 1.0.8 - 2026-06-24
 
 ### English

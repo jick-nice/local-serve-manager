@@ -24,7 +24,6 @@ const writeIfChanged = (filePath: string, next: string, changedFiles: string[]):
 const existingFiles = (servicePath: string, names: string[]): string[] =>
   names.map((name) => join(servicePath, name)).filter((filePath) => existsSync(filePath) && statSync(filePath).isFile());
 
-const apiBase = (port: number): string => `http://localhost:${port}/api/v1`;
 const proxyTarget = (port: number): string => `http://localhost:${port}`;
 const detectNewline = (content: string): string => (content.includes("\r\n") ? "\r\n" : "\n");
 
@@ -167,7 +166,12 @@ const syncViteProxyTarget = (content: string, backendPort: number): string =>
   content.replace(/(\btarget\s*:\s*['"])http:\/\/(?:localhost|127\.0\.0\.1):\d+(['"])/g, `$1${proxyTarget(backendPort)}$2`);
 
 const syncLocalApiUrls = (content: string, backendPort: number): string =>
-  content.replace(/http:\/\/(?:localhost|127\.0\.0\.1):\d+\/api\/v1/g, apiBase(backendPort));
+  content
+    .replace(/(https?:\/\/(?:localhost|127\.0\.0\.1|\[::1\]):)\d+(\/api\/v1)/g, `$1${backendPort}$2`)
+    .replace(
+      /(\$\{(?:window\.location\.)?protocol\}\/\/\$\{(?:window\.location\.)?hostname\}:)\d+(\/api\/v1)/g,
+      `$1${backendPort}$2`
+    );
 
 const syncPropertiesPort = (content: string, port: number): string => {
   const newline = detectNewline(content);

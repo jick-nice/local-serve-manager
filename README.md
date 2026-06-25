@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <img alt="Version" src="https://img.shields.io/badge/version-1.0.8-2563eb" />
+  <img alt="Version" src="https://img.shields.io/badge/version-1.0.9-2563eb" />
   <img alt="Platform" src="https://img.shields.io/badge/platform-Windows-0078d4" />
   <img alt="Electron" src="https://img.shields.io/badge/Electron-33-47848f" />
   <img alt="License" src="https://img.shields.io/badge/license-MIT-16a34a" />
@@ -57,7 +57,7 @@ Local Server Manager is a desktop tool for developers who run many local project
 Download the Windows installer from the release artifacts:
 
 ```text
-本地服务管理器 Setup 1.0.8.exe
+本地服务管理器 Setup 1.0.9.exe
 ```
 
 Run the installer and launch **本地服务管理器** from the desktop shortcut or the Start Menu.
@@ -167,7 +167,7 @@ MIT
 从 release 产物中下载安装包：
 
 ```text
-本地服务管理器 Setup 1.0.8.exe
+本地服务管理器 Setup 1.0.9.exe
 ```
 
 安装完成后，可以从桌面快捷方式或开始菜单启动 **本地服务管理器**。
